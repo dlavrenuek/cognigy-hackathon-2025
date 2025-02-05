@@ -15,7 +15,7 @@ export function createStartScene() {
     return k.scene("start", () => {
         const audioHandler = new AudioHandler();
         let currentPlayer: 'shark' | 'seal' | null = null;
-        const SAMPLES_NEEDED = 50;
+        const SAMPLES_NEEDED = 5;
         const SAMPLE_INTERVAL = 100;
 
         const COLORS = {
@@ -105,29 +105,38 @@ export function createStartScene() {
             let sampleCount = 0;
 
             zone.container.color = COLORS[player];
-            zone.status.text = "Get ready to make some noise...";
+            zone.status.text = "Make your sound!";
 
             await audioHandler.setupMicrophone(player);
             audioHandler.startCalibration();
 
+            // Check more frequently - every 16ms (roughly 60fps)
             const calibrationLoop = setInterval(async () => {
-                if (sampleCount >= SAMPLES_NEEDED) {
-                    clearInterval(calibrationLoop);
-                    audioHandler.finishCalibration(player);
-                    zone.status.text = "Calibration complete! ✓";
-                    currentPlayer = null;
-
-                    // Show test button
-                    zone.testButton.opacity = 1;
-                    zone.testButtonText.opacity = 1;
-                    return;
-                }
-
                 const sample = await audioHandler.captureCalibrationSample();
-                updateWaveform(zone.waveform, sample);
-                sampleCount++;
-                zone.status.text = `Calibrating: ${Math.floor((sampleCount / SAMPLES_NEEDED) * 100)}%`;
-            }, SAMPLE_INTERVAL);
+
+                if (sample) {
+                    updateWaveform(zone.waveform, sample);
+                    sampleCount++;
+
+                    if (sampleCount >= SAMPLES_NEEDED) {
+                        clearInterval(calibrationLoop);
+                        const success = audioHandler.finishCalibration(player);
+
+                        if (success) {
+                            zone.status.text = "Calibration complete! ✓";
+                            zone.testButton.opacity = 1;
+                            zone.testButtonText.opacity = 1;
+                        } else {
+                            zone.status.text = "Failed - Try again";
+                            zone.container.color = COLORS.inactive;
+                        }
+
+                        currentPlayer = null;
+                    } else {
+                        zone.status.text = `Got ${sampleCount} of 5 samples!\nMake your sound again...`;
+                    }
+                }
+            }, 16); // Check every 16ms instead of 50ms
         }
 
         function createFeedbackEffect(x: number, y: number, isGood: boolean) {
