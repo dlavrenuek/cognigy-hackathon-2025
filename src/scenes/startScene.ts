@@ -13,7 +13,14 @@ interface PlayerZone {
 
 export function createStartScene() {
     return k.scene("start", () => {
+        const DEBUG_SKIP_CALIBRATION = true;
         const audioHandler = new AudioHandler();
+
+        if (DEBUG_SKIP_CALIBRATION) {
+            audioHandler.setDummyProfile('shark');
+            audioHandler.setDummyProfile('seal');
+        }
+
         let currentPlayer: 'shark' | 'seal' | null = null;
         const SAMPLES_NEEDED = 5;
         const SAMPLE_INTERVAL = 100;
@@ -248,11 +255,36 @@ export function createStartScene() {
         }
 
         // Click handlers
-        sharkZone.container.onClick(() => !sharkZone.testingLoop && startCalibration('shark'));
-        sealZone.container.onClick(() => !sealZone.testingLoop && startCalibration('seal'));
+        sharkZone.container.onClick(() => {
+            // Don't start calibration if testing or already calibrating
+            if (!sharkZone.testingLoop && !currentPlayer) {
+                startCalibration('shark');
+            }
+        });
 
-        sharkZone.testButton.onClick(() => startTestingLoop('shark', sharkZone));
-        sealZone.testButton.onClick(() => startTestingLoop('seal', sealZone));
+        sealZone.container.onClick(() => {
+            // Don't start calibration if testing or already calibrating
+            if (!sealZone.testingLoop && !currentPlayer) {
+                startCalibration('seal');
+            }
+        });
+
+        // Test button handlers
+        sharkZone.testButton.onClick(() => {
+            // Stop any ongoing calibration before starting test
+            if (currentPlayer === 'shark') {
+                currentPlayer = null;
+            }
+            startTestingLoop('shark', sharkZone);
+        });
+
+        sealZone.testButton.onClick(() => {
+            // Stop any ongoing calibration before starting test
+            if (currentPlayer === 'seal') {
+                currentPlayer = null;
+            }
+            startTestingLoop('seal', sealZone);
+        });
 
         // Adjust start button position
         const startBtn = k.add([
@@ -272,8 +304,8 @@ export function createStartScene() {
 
         // Update loop
         k.onUpdate(() => {
-            const bothCalibrated = audioHandler.profiles.has('shark') &&
-                audioHandler.profiles.has('seal');
+            const bothCalibrated = DEBUG_SKIP_CALIBRATION ||
+                (audioHandler.profiles.has('shark') && audioHandler.profiles.has('seal'));
             startBtn.opacity = bothCalibrated ? 1 : 0.5;
             startBtn.area.enabled = bothCalibrated;
         });

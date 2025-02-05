@@ -261,4 +261,18 @@ export class AudioHandler {
 
         return matches / Math.max(current.length, stored.length);
     }
+
+    // Add debug method to set dummy profiles
+    setDummyProfile(player: 'shark' | 'seal') {
+        const dummyFrequencyProfile = new Array(1024).fill(128);
+        const dummyCharacteristics = {
+            peakFrequencies: [100, 200, 300], // Dummy peak frequencies
+            avgEnergy: 128
+        };
+
+        this.profiles.set(player, {
+            frequencyProfiles: [dummyFrequencyProfile],
+            frequencyCharacteristics: dummyCharacteristics
+        });
+    }
 } 
