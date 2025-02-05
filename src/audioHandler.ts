@@ -1,9 +1,9 @@
 export class AudioHandler {
-    private audioContexts: Map<string, AudioContext> = new Map()
-    public analyzers: Map<string, AnalyserNode> = new Map()
-    private mediaStreams: Map<string, MediaStream> = new Map()
-    private mediaStreamSources: Map<string, MediaStreamAudioSourceNode> = new Map()
-    private isListening: boolean = false
+    private audioContext: AudioContext | null = null;
+    private analyzer: AnalyserNode | null = null;
+    private mediaStream: MediaStream | null = null;
+    private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
+    private isListening: boolean = false;
     profiles: Map<string, {
         frequencyProfiles: number[][], // Store multiple profiles per player
         frequencyCharacteristics: {
@@ -22,61 +22,133 @@ export class AudioHandler {
     private lastSampleTime = 0;
     private isCurrentlyRecording = false;
 
-    constructor() {
-        // Remove the single audioContext and analyzer initialization
-    }
+    // Frequency ranges for each player
+    private readonly FREQUENCY_RANGES = {
+        shark: { min: 100, max: 400 },  // Low growl range
+        seal: { min: 800, max: 2000 }   // High bark range
+    };
 
-    async setupMicrophone(player: string): Promise<boolean> {
+    // Energy thresholds for detecting sounds
+    public readonly ENERGY_THRESHOLD = 0.2;
+
+    constructor() { }
+
+    async setupMicrophone(): Promise<boolean> {
         try {
-            // Create new AudioContext for this player
-            const audioContext = new AudioContext();
-            const analyzer = audioContext.createAnalyser();
-            analyzer.fftSize = 2048;
-            analyzer.smoothingTimeConstant = 0.8;
+            this.audioContext = new AudioContext();
+            this.analyzer = this.audioContext.createAnalyser();
+            this.analyzer.fftSize = 2048; // For better frequency resolution
+            this.analyzer.smoothingTimeConstant = 0.5;
 
-            // Resume audio context if it's suspended
-            if (audioContext.state === 'suspended') {
-                await audioContext.resume();
+            if (this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
             }
 
-            const mediaStream = await navigator.mediaDevices.getUserMedia({
+            this.mediaStream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
                 video: false,
-            })
+            });
 
-            const mediaStreamSource = audioContext.createMediaStreamSource(mediaStream)
-            mediaStreamSource.connect(analyzer)
-
-            // Create a dummy node to prevent audio feedback
-            const silentNode = audioContext.createGain();
-            silentNode.gain.value = 0;
-            analyzer.connect(silentNode);
-            silentNode.connect(audioContext.destination);
-
-            // Store all components for this player
-            this.audioContexts.set(player, audioContext);
-            this.analyzers.set(player, analyzer);
-            this.mediaStreams.set(player, mediaStream);
-            this.mediaStreamSources.set(player, mediaStreamSource);
+            this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.mediaStream);
+            this.mediaStreamSource.connect(this.analyzer);
 
             this.isListening = true;
-            console.log(`Microphone setup complete for ${player}`);
             return true;
         } catch (error) {
-            console.error(`Failed to setup microphone for ${player}:`, error)
-            return false
+            console.error('Failed to setup microphone:', error);
+            return false;
         }
     }
 
-    getVolume(player: string): number {
-        const analyzer = this.analyzers.get(player);
-        if (!this.isListening || !analyzer) return 0;
+    getFrequencyData(): { frequencies: Uint8Array, shark: number, seal: number } {
+        if (!this.analyzer || !this.isListening) {
+            return { frequencies: new Uint8Array(), shark: 0, seal: 0 };
+        }
 
-        const dataArray = new Uint8Array(analyzer.frequencyBinCount)
-        analyzer.getByteFrequencyData(dataArray)
+        const frequencies = new Uint8Array(this.analyzer.frequencyBinCount);
+        this.analyzer.getByteFrequencyData(frequencies);
 
-        const average = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length
-        return average / 255
+        // Calculate energy in shark and seal frequency ranges
+        const sharkEnergy = this.calculateBandEnergy(frequencies, 'shark');
+        const sealEnergy = this.calculateBandEnergy(frequencies, 'seal');
+
+        return {
+            frequencies,
+            shark: sharkEnergy,
+            seal: sealEnergy
+        };
+    }
+
+    private calculateBandEnergy(frequencies: Uint8Array, player: 'shark' | 'seal'): number {
+        const { min, max } = this.FREQUENCY_RANGES[player];
+        const nyquist = this.audioContext!.sampleRate / 2;
+        const minIndex = Math.floor((min / nyquist) * frequencies.length);
+        const maxIndex = Math.floor((max / nyquist) * frequencies.length);
+
+        let energy = 0;
+        let count = 0;
+
+        for (let i = minIndex; i <= maxIndex; i++) {
+            energy += frequencies[i];
+            count++;
+        }
+
+        return count > 0 ? (energy / (count * 255)) : 0;
+    }
+
+    testAudioMatch(player: 'shark' | 'seal'): number {
+        const analyzer = this.analyzer;
+        if (!this.isListening || !analyzer) {
+            return 0;
+        }
+
+        const frequencies = new Uint8Array(analyzer.frequencyBinCount);
+        analyzer.getByteFrequencyData(frequencies);
+
+        const sharkEnergy = this.calculateBandEnergy(frequencies, 'shark');
+        const sealEnergy = this.calculateBandEnergy(frequencies, 'seal');
+
+        // Return match score based on energy in correct range
+        const energy = player === 'shark' ? sharkEnergy : sealEnergy;
+        const otherEnergy = player === 'shark' ? sealEnergy : sharkEnergy;
+
+        // Different scenarios:
+        // 1. Clear single sound in correct range
+        if (energy > this.ENERGY_THRESHOLD && otherEnergy < this.ENERGY_THRESHOLD) {
+            return energy;
+        }
+        // 2. Simultaneous sounds but correct range is stronger
+        else if (energy > this.ENERGY_THRESHOLD && energy > (otherEnergy * 1.5)) {
+            return energy * 0.7; // Reduce score when there's some interference
+        }
+        // 3. Too much interference or wrong sound
+        return 0;
+    }
+
+    cleanup() {
+        if (this.mediaStream) {
+            this.mediaStream.getTracks().forEach(track => track.stop());
+        }
+        if (this.mediaStreamSource) {
+            this.mediaStreamSource.disconnect();
+        }
+        if (this.analyzer) {
+            this.analyzer.disconnect();
+        }
+        if (this.audioContext) {
+            this.audioContext.close();
+        }
+
+        this.mediaStream = null;
+        this.mediaStreamSource = null;
+        this.analyzer = null;
+        this.audioContext = null;
+        this.isListening = false;
+    }
+
+    // Helper method for visualization
+    getFrequencyRanges() {
+        return this.FREQUENCY_RANGES;
     }
 
     startCalibration() {
@@ -87,18 +159,13 @@ export class AudioHandler {
     }
 
     async captureCalibrationSample(): Promise<number[] | null> {
-        if (!this.isListening || !this.isCalibrating || this.isCurrentlyRecording) {
+        if (!this.isListening || !this.isCalibrating || this.isCurrentlyRecording || !this.analyzer) {
             return null;
         }
 
-        const currentPlayer = this.getCurrentPlayer();
-        const analyzer = this.analyzers.get(currentPlayer);
-        if (!analyzer) return null;
-
-        const dataArray = new Uint8Array(analyzer.frequencyBinCount);
-        analyzer.getByteFrequencyData(dataArray);
+        const dataArray = new Uint8Array(this.analyzer.frequencyBinCount);
+        this.analyzer.getByteFrequencyData(dataArray);
         const currentVolume = this.calculateVolume(dataArray);
-        console.log("Current volume:", currentVolume);
 
         // Only capture if there's significant sound and enough time has passed
         const now = Date.now();
@@ -114,14 +181,14 @@ export class AudioHandler {
 
                 // Take several readings over the sample duration
                 for (let i = 0; i < 3; i++) {
-                    const reading = new Uint8Array(analyzer.frequencyBinCount);
-                    analyzer.getByteFrequencyData(reading);
+                    const reading = new Uint8Array(this.analyzer.frequencyBinCount);
+                    this.analyzer.getByteFrequencyData(reading);
                     readings.push(Array.from(reading));
                     await new Promise(resolve => setTimeout(resolve, sampleDuration / 3));
                 }
 
                 // Average the readings
-                const sample = new Array(analyzer.frequencyBinCount).fill(0);
+                const sample = new Array(this.analyzer.frequencyBinCount).fill(0);
                 for (let i = 0; i < sample.length; i++) {
                     sample[i] = readings.reduce((sum, reading) => sum + reading[i], 0) / readings.length;
                 }
@@ -273,114 +340,6 @@ export class AudioHandler {
         return smoothed;
     }
 
-    cleanup() {
-        // Cleanup all audio components for all players
-        for (const [player] of this.mediaStreams) {
-            this.cleanupPlayer(player);
-        }
-        this.isListening = false;
-    }
-
-    private cleanupPlayer(player: string) {
-        const mediaStream = this.mediaStreams.get(player);
-        if (mediaStream) {
-            mediaStream.getTracks().forEach(track => track.stop());
-        }
-
-        const mediaStreamSource = this.mediaStreamSources.get(player);
-        if (mediaStreamSource) {
-            mediaStreamSource.disconnect();
-        }
-
-        const analyzer = this.analyzers.get(player);
-        if (analyzer) {
-            analyzer.disconnect();
-        }
-
-        this.mediaStreams.delete(player);
-        this.mediaStreamSources.delete(player);
-        this.analyzers.delete(player);
-        this.audioContexts.delete(player);
-    }
-
-    testAudioMatch(player: 'shark' | 'seal'): number {
-        const analyzer = this.analyzers.get(player);
-        if (!this.isListening || !this.profiles.has(player) || !analyzer) {
-            return 0;
-        }
-
-        const currentAudio = new Uint8Array(analyzer.frequencyBinCount);
-        analyzer.getByteFrequencyData(currentAudio);
-        const currentProfile = Array.from(currentAudio);
-
-        // Get current volume
-        const currentVolume = this.calculateVolume(currentAudio);
-        if (currentVolume < this.VOLUME_THRESHOLD) {
-            return 0;
-        }
-
-        const storedProfile = this.profiles.get(player)!;
-        const currentCharacteristics = this.calculateFrequencyCharacteristics([currentProfile]);
-
-        // Calculate weighted match score
-        const peakMatch = this.comparePeakFrequencies(
-            currentCharacteristics.peakFrequencies,
-            storedProfile.frequencyCharacteristics.peakFrequencies
-        );
-
-        const centroidMatch = 1 - Math.abs(
-            currentCharacteristics.spectralCentroid -
-            storedProfile.frequencyCharacteristics.spectralCentroid
-        ) / storedProfile.frequencyCharacteristics.spectralCentroid;
-
-        const rolloffMatch = 1 - Math.abs(
-            currentCharacteristics.spectralRolloff -
-            storedProfile.frequencyCharacteristics.spectralRolloff
-        ) / storedProfile.frequencyCharacteristics.spectralRolloff;
-
-        const zcrMatch = 1 - Math.abs(
-            currentCharacteristics.zeroCrossingRate -
-            storedProfile.frequencyCharacteristics.zeroCrossingRate
-        ) / storedProfile.frequencyCharacteristics.zeroCrossingRate;
-
-        // Weight the different characteristics
-        return (
-            peakMatch * 0.4 +
-            Math.max(0, centroidMatch) * 0.2 +
-            Math.max(0, rolloffMatch) * 0.2 +
-            Math.max(0, zcrMatch) * 0.2
-        );
-    }
-
-    private findPeakFrequencies(audio: number[]): number[] {
-        const peaks: number[] = [];
-        for (let i = 1; i < audio.length - 1; i++) {
-            if (audio[i] > audio[i - 1] &&
-                audio[i] > audio[i + 1] &&
-                audio[i] > 50) {
-                peaks.push(i);
-            }
-        }
-        return peaks.slice(0, 3); // Keep top 3 peaks
-    }
-
-    private comparePeakFrequencies(current: number[], stored: number[]): number {
-        if (current.length === 0 || stored.length === 0) return 0;
-
-        // Calculate how many peaks match within a tolerance range
-        const tolerance = 2; // Frequency bin tolerance
-        let matches = 0;
-
-        current.forEach(currentPeak => {
-            if (stored.some(storedPeak =>
-                Math.abs(currentPeak - storedPeak) <= tolerance)) {
-                matches++;
-            }
-        });
-
-        return matches / Math.max(current.length, stored.length);
-    }
-
     // Add debug method to set dummy profiles
     setDummyProfile(player: 'shark' | 'seal') {
         const dummyFrequencyProfile = new Array(1024).fill(128);
@@ -399,9 +358,44 @@ export class AudioHandler {
         });
     }
 
-    // Helper method to get current player during calibration
-    private getCurrentPlayer(): string {
-        // This should be updated to track the current calibrating player
-        return Array.from(this.analyzers.keys())[0] || '';
+    // Add new method to detect simultaneous sounds
+    detectSimultaneousSounds(): {
+        shark: number,
+        seal: number,
+        isSimultaneous: boolean
+    } {
+        if (!this.analyzer || !this.isListening) {
+            return { shark: 0, seal: 0, isSimultaneous: false };
+        }
+
+        const frequencies = new Uint8Array(this.analyzer.frequencyBinCount);
+        this.analyzer.getByteFrequencyData(frequencies);
+
+        const sharkEnergy = this.calculateBandEnergy(frequencies, 'shark');
+        const sealEnergy = this.calculateBandEnergy(frequencies, 'seal');
+
+        // Detect if both sounds are present above threshold
+        const isSimultaneous = (
+            sharkEnergy > this.ENERGY_THRESHOLD &&
+            sealEnergy > this.ENERGY_THRESHOLD
+        );
+
+        return {
+            shark: sharkEnergy,
+            seal: sealEnergy,
+            isSimultaneous
+        };
+    }
+
+    private findPeakFrequencies(audio: number[]): number[] {
+        const peaks: number[] = [];
+        for (let i = 1; i < audio.length - 1; i++) {
+            if (audio[i] > audio[i - 1] &&
+                audio[i] > audio[i + 1] &&
+                audio[i] > 50) {
+                peaks.push(i);
+            }
+        }
+        return peaks.slice(0, 3); // Keep top 3 peaks
     }
 } 

@@ -113,14 +113,14 @@ export function createStartScene() {
             zone.container.color = COLORS[player];
             zone.status.text = "Make your sound!";
 
-            await audioHandler.setupMicrophone(player);
+            await audioHandler.setupMicrophone();
             audioHandler.startCalibration();
 
             const calibrationLoop = setInterval(async () => {
                 const sample = await audioHandler.captureCalibrationSample();
 
                 if (sample) {
-                    updateWaveform(zone.waveform, sample);
+                    updateWaveform(zone.waveform, sample, player);
                     sampleCount++;
 
                     if (sampleCount >= SAMPLES_NEEDED) {
@@ -185,75 +185,74 @@ export function createStartScene() {
             });
         }
 
-        function startTestingLoop(player: 'shark' | 'seal', zone: any) {
+        function updateWaveform(waveformObj: any, audioData: number[], player: 'shark' | 'seal') {
+            const points = audioData.filter((_, i) => i % 8 === 0);
+            const maxHeight = 150;
+
+            // Create waveform vertices with highlighted range
+            const vertices = points.map((value, i) => {
+                const x = (i / points.length) * 280;
+                const y = (value / 255) * maxHeight;
+                return k.vec2(x - 140, y - maxHeight / 2);
+            });
+
+            // Remove existing shape components
+            waveformObj.unuse("polygon");
+            waveformObj.unuse("rect");
+            waveformObj.use(k.polygon(vertices));
+
+            // Color the waveform based on if it's in the correct range
+            const { shark, seal, isSimultaneous } = audioHandler.detectSimultaneousSounds();
+            const energy = player === 'shark' ? shark : seal;
+            const otherEnergy = player === 'shark' ? seal : shark;
+
+            if (isSimultaneous) {
+                waveformObj.color = k.rgb(255, 165, 0); // Orange for interference
+            } else if (energy > audioHandler.ENERGY_THRESHOLD && energy > (otherEnergy * 1.5)) {
+                waveformObj.color = k.rgb(0, 255, 0); // Green for good sound
+            } else {
+                waveformObj.color = COLORS[player];
+            }
+        }
+
+        function startTestingLoop(player: 'shark' | 'seal', zone: PlayerZone) {
             if (zone.testingLoop) {
                 clearInterval(zone.testingLoop);
-                zone.testingLoop = null;
                 zone.testButton.color = k.rgb(100, 100, 100);
                 zone.testButtonText.text = "Test Sound";
-                zone.status.text = "Calibration complete! ✓";
+                zone.status.text = "Ready!";
                 return;
             }
 
             zone.testButton.color = k.rgb(200, 50, 50);
             zone.testButtonText.text = "Stop Test";
-            zone.status.text = "Make your sound!";
+
+            // Add frequency range info to status
+            zone.status.text = player === 'shark'
+                ? "Make a low growling sound!"
+                : "Make a high-pitched bark!";
 
             let lastMatchTime = 0;
-            const FEEDBACK_COOLDOWN = 300; // ms between feedback effects
+            const FEEDBACK_COOLDOWN = 300;
 
-            const testingLoop = setInterval(() => {
+            zone.testingLoop = setInterval(() => {
+                const { frequencies } = audioHandler.getFrequencyData();
+                updateWaveform(zone.waveform, Array.from(frequencies), player);
+
                 const matchScore = audioHandler.testAudioMatch(player);
                 const now = Date.now();
-
-                // Update waveform color based on match score
-                zone.waveform.color = matchScore > 0
-                    ? k.rgb(
-                        COLORS[player].r,
-                        COLORS[player].g,
-                        COLORS[player].b,
-                        matchScore
-                    )
-                    : k.rgb(200, 200, 200);
 
                 // Create feedback effects with cooldown
                 if (now - lastMatchTime > FEEDBACK_COOLDOWN) {
                     if (matchScore > 0.6) {
                         createFeedbackEffect(zone.container.pos.x, zone.container.pos.y, true);
                         lastMatchTime = now;
-                    } else if (matchScore > 0.2) {
+                    } else if (matchScore > 0) {
                         createFeedbackEffect(zone.container.pos.x, zone.container.pos.y, false);
                         lastMatchTime = now;
                     }
                 }
-
-                // Get current audio for waveform
-                const analyzer = audioHandler.analyzers.get(player);
-                if (analyzer) {
-                    const dataArray = new Uint8Array(analyzer.frequencyBinCount);
-                    analyzer.getByteFrequencyData(dataArray);
-                    updateWaveform(zone.waveform, Array.from(dataArray));
-                }
             }, 50);
-
-            zone.testingLoop = testingLoop;
-        }
-
-        function updateWaveform(waveformObj: any, audioData: number[]) {
-            const points = audioData.filter((_, i) => i % 8 === 0);
-            const maxHeight = 150;
-
-            // Create waveform vertices
-            const vertices = points.map((value, i) => {
-                const x = (i / points.length) * 280;
-                const y = (value / 255) * maxHeight;
-                return k.vec2(x - 140, y - maxHeight / 2); // Center the waveform
-            });
-
-            // Remove existing shape components before adding new one
-            waveformObj.unuse("polygon");
-            waveformObj.unuse("rect");
-            waveformObj.use(k.polygon(vertices));
         }
 
         // Click handlers
@@ -314,6 +313,9 @@ export function createStartScene() {
 
         startBtn.onClick(() => {
             if (startBtn.area.enabled) {
+                // Make sure to clean up testing loops
+                if (sharkZone.testingLoop) clearInterval(sharkZone.testingLoop);
+                if (sealZone.testingLoop) clearInterval(sealZone.testingLoop);
                 k.go("play", { audioHandler });
             }
         });
