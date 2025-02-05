@@ -52,8 +52,20 @@ export function createStartScene() {
             k.anchor("center"),
         ]);
 
-        startBtn.onClick(() => {
-            k.go("play", { audioHandler });
+        startBtn.onClick(async () => {
+            // Try to setup audio when the start button is clicked
+            const success = await audioHandler.setupMicrophone();
+            if (success) {
+                k.go("play", { audioHandler });
+            } else {
+                // Show error message if microphone setup fails
+                k.add([
+                    k.text("Please allow microphone access to play", { size: 24 }),
+                    k.pos(k.center().add(0, k.height() * 0.45)),
+                    k.anchor("center"),
+                    k.color(k.rgb(255, 100, 100)),
+                ]);
+            }
         });
 
         // Cleanup on scene exit

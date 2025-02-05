@@ -10,13 +10,13 @@ export class FrequencyVisualizer {
 
     constructor(private audioHandler: AudioHandler) {
         // Wait for next frame before initializing
-        k.wait(0, () => {
-            this.setupVisualizer();
-            this.startVisualization();
+        k.wait(0, async () => {
+            await this.setupVisualizer();
+            await this.startVisualization();
         });
     }
 
-    private setupVisualizer() {
+    private async setupVisualizer() {
         // Background container
         k.add([
             k.rect(this.VISUALIZER_WIDTH, this.VISUALIZER_HEIGHT),
@@ -41,8 +41,21 @@ export class FrequencyVisualizer {
         }
     }
 
-    private startVisualization() {
-        this.audioHandler.setupMicrophone();
+    private async startVisualization() {
+        // Wait for microphone setup to complete
+        const success = await this.audioHandler.setupMicrophone();
+
+        if (!success) {
+            console.error("Failed to setup microphone");
+            // Add some visual feedback for the user
+            k.add([
+                k.text("Microphone access denied or not available", { size: 24 }),
+                k.pos(k.center().x, k.height() * 0.7),
+                k.anchor("center"),
+                k.color(k.rgb(255, 100, 100)),
+            ]);
+            return;
+        }
 
         k.onUpdate(() => {
             const { frequencies } = this.audioHandler.getFrequencyData();
