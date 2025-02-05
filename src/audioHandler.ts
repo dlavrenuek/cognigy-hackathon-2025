@@ -23,7 +23,11 @@ export class AudioHandler {
 
     async setupMicrophone(): Promise<boolean> {
         try {
-            this.audioContext = new AudioContext();
+            // Create AudioContext only when this method is called
+            if (!this.audioContext) {
+                this.audioContext = new AudioContext();
+            }
+
             this.analyzer = this.audioContext.createAnalyser();
             this.analyzer.fftSize = 2048; // For better frequency resolution
             this.analyzer.smoothingTimeConstant = 0.5;

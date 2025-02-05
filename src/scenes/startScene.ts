@@ -5,6 +5,7 @@ import { FrequencyVisualizer } from "./FrequencyVisualizer"
 export function createStartScene() {
     return k.scene("start", () => {
         const audioHandler = new AudioHandler();
+        let visualizer: FrequencyVisualizer | null = null;
 
         // Create UI elements
         k.add([
@@ -33,9 +34,6 @@ export function createStartScene() {
             k.color(k.rgb(100, 100, 255)),
         ])
 
-        // Create frequency visualizer
-        const visualizer = new FrequencyVisualizer(audioHandler);
-
         // Create start button
         const startBtn = k.add([
             k.rect(250, 100),
@@ -47,30 +45,47 @@ export function createStartScene() {
         ]);
 
         k.add([
-            k.text("Start Game", { size: 40 }),
+            k.text("Click to Enable Audio", { size: 40 }),
             k.pos(k.center().add(0, k.height() * 0.35)),
             k.anchor("center"),
         ]);
 
+        let hasInitialized = false;
+
         startBtn.onClick(async () => {
-            // Try to setup audio when the start button is clicked
-            const success = await audioHandler.setupMicrophone();
-            if (success) {
-                k.go("play", { audioHandler });
+            if (!hasInitialized) {
+                // First click: Initialize audio
+                const success = await audioHandler.setupMicrophone();
+                if (success) {
+                    hasInitialized = true;
+                    visualizer = new FrequencyVisualizer(audioHandler);
+                    startBtn.color = k.rgb(0, 150, 0);
+                    // Update button text
+                    k.add([
+                        k.text("Start Game", { size: 40 }),
+                        k.pos(k.center().add(0, k.height() * 0.35)),
+                        k.anchor("center"),
+                    ]);
+                } else {
+                    // Show error message if microphone setup fails
+                    k.add([
+                        k.text("Please allow microphone access to play", { size: 24 }),
+                        k.pos(k.center().add(0, k.height() * 0.45)),
+                        k.anchor("center"),
+                        k.color(k.rgb(255, 100, 100)),
+                    ]);
+                }
             } else {
-                // Show error message if microphone setup fails
-                k.add([
-                    k.text("Please allow microphone access to play", { size: 24 }),
-                    k.pos(k.center().add(0, k.height() * 0.45)),
-                    k.anchor("center"),
-                    k.color(k.rgb(255, 100, 100)),
-                ]);
+                // Second click: Start the game
+                k.go("play", { audioHandler });
             }
         });
 
         // Cleanup on scene exit
         k.onSceneLeave(() => {
-            visualizer.cleanup();
+            if (visualizer) {
+                visualizer.cleanup();
+            }
         });
     });
 }
