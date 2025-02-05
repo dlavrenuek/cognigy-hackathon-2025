@@ -7,6 +7,32 @@ globs:
 ## Core Game Concept
 A 2D two-player browser game built with Kaboom.js where players control characters through voice commands.
 
+## Technologies
+TypeScript
+
+## Game Screens
+
+1. Start Screen:
+   - Microphone setup and testing area
+   - Two separate voice test zones (Shark & Seal)
+   - Visual feedback for voice input
+   - Play button (only enabled when both mics are working)
+   - Basic tutorial/instructions
+   
+2. Play Screen:
+   - Split-screen gameplay initially
+   - Merges into single screen during chase
+   - Real-time voice input visualization
+   - Score/distance indicators
+   - Progress towards island (seal's goal)
+
+3. End Screen:
+   - Final game state visualization
+   - Winner announcement
+   - Final positions of shark and seal
+   - Play again button
+   - Game statistics (distance covered, jumps made, etc.)
+
 ## Game Flow
 1. Initial Phase:
    - Split-screen gameplay
@@ -21,6 +47,10 @@ A 2D two-player browser game built with Kaboom.js where players control characte
    - Seal player: Makes sounds to escape
    - Shark player: Makes sounds to catch up
 
+3. End Conditions:
+   - Shark catches seal: Shark victory
+   - Seal reaches island: Seal victory
+
 ## Technical Stack
 - Engine: Kaboom.js
 - Audio Processing: Web Audio API
@@ -33,6 +63,7 @@ A 2D two-player browser game built with Kaboom.js where players control characte
 - Obstacle avoidance
 - Split-screen to single-screen transition
 - Collision detection between characters
+- Microphone testing and calibration
 
 ## Development Approach
 - AI-assisted development
