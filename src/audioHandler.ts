@@ -1,6 +1,6 @@
 export class AudioHandler {
     private audioContext: AudioContext
-    private analyzer: AnalyserNode
+    public analyzer: AnalyserNode
     private mediaStream: MediaStream | null = null
     private isListening: boolean = false
     profiles: Map<string, any> = new Map();
@@ -108,5 +108,23 @@ export class AudioHandler {
             this.mediaStream.getTracks().forEach(track => track.stop())
         }
         this.isListening = false
+    }
+
+    testAudioMatch(player: 'shark' | 'seal'): number {
+        if (!this.isListening || !this.profiles.has(player)) {
+            return 0;
+        }
+
+        const currentAudio = new Uint8Array(this.analyzer.frequencyBinCount);
+        this.analyzer.getByteFrequencyData(currentAudio);
+
+        const profile = this.profiles.get(player);
+        const threshold = profile.threshold;
+
+        // Calculate average volume of current audio
+        const currentVolume = Array.from(currentAudio).reduce((sum, val) => sum + val, 0) / currentAudio.length;
+
+        // Return a match score between 0 and 1
+        return currentVolume > threshold ? Math.min(currentVolume / (threshold * 2), 1) : 0;
     }
 } 
