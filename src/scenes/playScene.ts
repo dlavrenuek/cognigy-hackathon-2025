@@ -1,5 +1,7 @@
 import { k } from "../kaboom"
 
+type Obj = ReturnType<typeof k.add>;
+
 export function createPlayScene() {
     return k.scene("play", () => {
         // Game state
@@ -8,10 +10,11 @@ export function createPlayScene() {
         const playerStartPosY = k.height() / 2;
         const wavesCount = 7;
         let cameraPos = 0
-        const phase = 1;
+        let phase = 1;
+        let isPaused = false;
 
         // Add after game state constants
-        const JUMP_FORCE = 800;
+        const JUMP_FORCE = 750;
         const GRAVITY = 1200;
 
         // Split screen setup
@@ -46,7 +49,7 @@ export function createPlayScene() {
             ])
         }
 
-        const waves: ReturnType<typeof k.add>[] = [];;
+        const waves: Obj[] = [];;
 
         // Waves layer
         for (let i = 0; i < wavesCount; i++) {
@@ -70,7 +73,7 @@ export function createPlayScene() {
         }
 
         // Add obstacles
-        const obstacles: ReturnType<typeof k.add>[] = [];
+        const obstacles: Obj[] = [];
         const obstacleCount = 5;
         
         for (let i = 0; i < obstacleCount; i++) {
@@ -91,7 +94,7 @@ export function createPlayScene() {
                     startY: playerStartPosY + 60,
                     amplitude: 5,
                     frequency: 2 + Math.random() * 2,
-                    speed: GAME_SPEED * 1.2
+                    speed: GAME_SPEED * 3
                 }
             ]))
         }
@@ -102,18 +105,22 @@ export function createPlayScene() {
                 width: 200,
                 height: 200,
             }),
-            k.pos(k.width() * 0.33 / 2 - 100, playerStartPosY),
-            k.area(),
+            k.pos(-k.width() * 0.4, playerStartPosY),
+            k.area({
+                width: 200,
+                height: 150,
+                offset: k.vec2(0, -60)  // Offset collision box up by 50px
+            }),
             k.width(200),
             k.height(200),
-            k.fixed(),
+            //k.fixed(),
             k.z(1),
             "shark",
             {
                 startY: playerStartPosY,
                 amplitude: 10,
                 frequency: 3,
-                speed: GAME_SPEED,
+                speed: -GAME_SPEED,
                 velocity: 0,
                 isJumping: false,
             },
@@ -124,50 +131,98 @@ export function createPlayScene() {
                 width: 200,
                 height: 200,
             }),
-            k.pos(k.width() * 0.5 - 100, playerStartPosY),
-            k.area(),
+            k.pos(0, playerStartPosY),
+            k.area({
+                width: 200,
+                height: 150,
+                offset: k.vec2(0, -60)  // Offset collision box up by 50px
+            }),
             k.width(200),
             k.height(200),
-            k.fixed(),
+            //k.fixed(),
             k.z(1),
             "seal",
             {
                 startY: playerStartPosY,
                 amplitude: 10,
                 frequency: 5,
-                speed: GAME_SPEED,
+                speed: -GAME_SPEED,
                 velocity: 0,
                 isJumping: false,
             },
         ])
+        
+        shark.play("idle")
+        seal.play("idle")
+        // After player setup, before jump function
+        
+        // Collision handling
+        const handleCollision = (player: Obj, obstacle: Obj) => {
+            // Flash the player red
+            player.use(k.color(255, 0, 0))
+
+            /*
+            obstacle.use(k.color(255, 0, 0))
+
+            k.add([
+                k.rect(player.width, player.height),
+                k.pos(player.pos.x, player.pos.y),
+                k.color(255, 0, 0),
+                k.z(-1),
+            ])
+            
+            isPaused = true;
+            */
+
+            // Short delay before ending game
+            k.wait(0.5, () => {
+                // Determine winner (opposite of who hit the obstacle)
+                const winner = player.is("shark") ? "seal" : "shark"
+                k.go("end", { winner })
+            })
+        }
+
+        // Add collision detection for shark
+        shark.onCollide("obstacle", (obstacle: Obj) => {
+            handleCollision(shark, obstacle)
+        })
+
+        // Add collision detection for seal
+        seal.onCollide("obstacle", (obstacle: Obj) => {
+            console.log("collision?", seal.pos, obstacle.pos, k.width());
+            handleCollision(seal, obstacle)
+        })
 
         // Implement jump function
-        const jump = (player: ReturnType<typeof k.add>) => {
+        const jump = (player: Obj) => {
             if (!player.isJumping) {
                 player.velocity = -JUMP_FORCE;
                 player.isJumping = true;
             }
         }
 
-        // Basic movement controls
-        k.onKeyPress("space", () => {
+        // Separate jump controls for each player
+        k.onKeyPress("left", () => {
             jump(shark);
+        })
+
+        k.onKeyPress("right", () => {
             jump(seal);
         })
 
         // Modify oscillate function to not affect jumping characters
-        const oscillate = (obj: ReturnType<typeof k.add>) => {
+        const oscillate = (obj: Obj) => {
             if (!obj.isJumping) {
                 obj.pos.y = obj.startY + Math.sin(k.time() * obj.frequency) * obj.amplitude;
             }
         }
 
-        const move = (obj: ReturnType<typeof k.add>) => {
+        const move = (obj: Obj) => {
             obj.pos.x -= obj.speed * k.dt()
         }
 
         // Add physics update function
-        const updatePhysics = (player: ReturnType<typeof k.add>) => {
+        const updatePhysics = (player: Obj) => {
             if (player.isJumping) {
                 // Apply gravity
                 player.velocity += GRAVITY * k.dt();
@@ -184,6 +239,7 @@ export function createPlayScene() {
 
         // Game loop
         k.onUpdate(() => {
+            if (isPaused) return
             // Move camera/scene instead of characters
             cameraPos += GAME_SPEED * k.dt()
             k.camPos(k.vec2(cameraPos, k.height() / 2))
@@ -202,11 +258,19 @@ export function createPlayScene() {
                 if (!player.isJumping) {
                     oscillate(player);
                 }
+                move(player);
             });
 
             // Update obstacles
-            obstacles.forEach(oscillate);
-            obstacles.forEach(move);
+            obstacles.forEach(obstacle => {
+                oscillate(obstacle);
+                move(obstacle);
+
+                // Check if obstacle is off screen and should be destroyed
+                if (obstacle.pos.x < cameraPos - k.width()) {
+                    obstacle.destroy()
+                }
+            });
 
             // Can add logic here for shark catching up to seal
             // For example, if shark's relative position catches up to seal's
