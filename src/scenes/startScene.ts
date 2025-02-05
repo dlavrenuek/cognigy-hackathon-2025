@@ -1,5 +1,4 @@
-import { GameObj } from "kaboom"
-import { k } from "../game"
+import { k } from "../kaboom"
 
 export function createStartScene() {
     return k.scene("start", () => {
