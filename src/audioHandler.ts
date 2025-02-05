@@ -4,17 +4,7 @@ export class AudioHandler {
     private mediaStream: MediaStream | null = null;
     private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
     private isListening: boolean = false;
-    profiles: Map<string, {
-        frequencyProfiles: number[][], // Store multiple profiles per player
-        frequencyCharacteristics: {
-            peakFrequencies: number[],
-            avgEnergy: number,
-            spectralCentroid: number,
-            spectralRolloff: number,
-            zeroCrossingRate: number,
-            formants: number[]  // Voice formants (resonant frequencies)
-        }
-    }> = new Map();
+    profiles = new Map<string, boolean>();
     private calibrationData: number[][] = [];
     private isCalibrating: boolean = false;
     private readonly VOLUME_THRESHOLD = 0.3; // Minimum volume to detect sound
@@ -31,7 +21,11 @@ export class AudioHandler {
     // Energy thresholds for detecting sounds
     public readonly ENERGY_THRESHOLD = 0.2;
 
-    constructor() { }
+    constructor() {
+        // Initialize both players as ready
+        this.profiles.set('shark', true);
+        this.profiles.set('seal', true);
+    }
 
     async setupMicrophone(): Promise<boolean> {
         try {
@@ -151,213 +145,6 @@ export class AudioHandler {
         return this.FREQUENCY_RANGES;
     }
 
-    startCalibration() {
-        this.calibrationData = [];
-        this.isCalibrating = true;
-        this.isCurrentlyRecording = false;
-        this.lastSampleTime = 0;
-    }
-
-    async captureCalibrationSample(): Promise<number[] | null> {
-        if (!this.isListening || !this.isCalibrating || this.isCurrentlyRecording || !this.analyzer) {
-            return null;
-        }
-
-        const dataArray = new Uint8Array(this.analyzer.frequencyBinCount);
-        this.analyzer.getByteFrequencyData(dataArray);
-        const currentVolume = this.calculateVolume(dataArray);
-
-        // Only capture if there's significant sound and enough time has passed
-        const now = Date.now();
-        if (currentVolume > this.VOLUME_THRESHOLD &&
-            (now - this.lastSampleTime) > this.MIN_SAMPLE_GAP) {
-
-            this.isCurrentlyRecording = true;
-
-            try {
-                // Take multiple readings over a short period to get a better sample
-                const sampleDuration = 100; // ms
-                const readings: number[][] = [];
-
-                // Take several readings over the sample duration
-                for (let i = 0; i < 3; i++) {
-                    const reading = new Uint8Array(this.analyzer.frequencyBinCount);
-                    this.analyzer.getByteFrequencyData(reading);
-                    readings.push(Array.from(reading));
-                    await new Promise(resolve => setTimeout(resolve, sampleDuration / 3));
-                }
-
-                // Average the readings
-                const sample = new Array(this.analyzer.frequencyBinCount).fill(0);
-                for (let i = 0; i < sample.length; i++) {
-                    sample[i] = readings.reduce((sum, reading) => sum + reading[i], 0) / readings.length;
-                }
-
-                this.calibrationData.push(sample);
-                this.lastSampleTime = now;
-                return sample;
-            } finally {
-                this.isCurrentlyRecording = false;
-            }
-        }
-
-        return null;
-    }
-
-    private calculateVolume(dataArray: Uint8Array): number {
-        // Get more accurate volume by focusing on meaningful frequency range
-        // Skip first few bins (very low frequencies) and very high frequencies
-        const start = 5;  // Skip first few bins (usually noise)
-        const end = Math.floor(dataArray.length * 0.8);  // Skip very high frequencies
-
-        let sum = 0;
-        let count = 0;
-        for (let i = start; i < end; i++) {
-            sum += dataArray[i];
-            count++;
-        }
-        return sum / (count * 255); // Normalize to 0-1
-    }
-
-    finishCalibration(player: string) {
-        if (this.calibrationData.length === 0) {
-            console.warn(`No calibration data collected for ${player}`);
-            return false;
-        }
-
-        // Store the raw frequency profiles
-        const frequencyProfiles = [...this.calibrationData];
-
-        // Calculate frequency characteristics
-        const characteristics = this.calculateFrequencyCharacteristics(frequencyProfiles);
-
-        // Store both profiles and characteristics
-        this.profiles.set(player, {
-            frequencyProfiles,
-            frequencyCharacteristics: characteristics
-        });
-
-        this.isCalibrating = false;
-        this.calibrationData = [];
-        return true;
-    }
-
-    private calculateFrequencyCharacteristics(profiles: number[][]) {
-        // Average the frequency data across all samples
-        const avgProfile = new Array(profiles[0].length).fill(0);
-        profiles.forEach(profile => {
-            profile.forEach((val, i) => {
-                avgProfile[i] += val;
-            });
-        });
-
-        avgProfile.forEach((val, i) => {
-            avgProfile[i] /= profiles.length;
-        });
-
-        // Find peak frequencies (local maxima)
-        const peakFrequencies = this.findPeakFrequencies(avgProfile);
-
-        // Calculate spectral centroid (brightness of sound)
-        let numerator = 0;
-        let denominator = 0;
-        avgProfile.forEach((magnitude, i) => {
-            numerator += magnitude * i;
-            denominator += magnitude;
-        });
-        const spectralCentroid = numerator / denominator;
-
-        // Calculate spectral rolloff (frequency below which 85% of spectrum energy lies)
-        const totalEnergy = avgProfile.reduce((sum, val) => sum + val, 0);
-        let energySum = 0;
-        let rolloffIndex = 0;
-        for (let i = 0; i < avgProfile.length; i++) {
-            energySum += avgProfile[i];
-            if (energySum >= totalEnergy * 0.85) {
-                rolloffIndex = i;
-                break;
-            }
-        }
-
-        // Calculate zero-crossing rate from time domain data
-        const zeroCrossings = this.calculateZeroCrossings(profiles[0]);
-
-        // Estimate formants (resonant frequencies)
-        const formants = this.estimateFormants(avgProfile);
-
-        return {
-            peakFrequencies: peakFrequencies.slice(0, 3),
-            avgEnergy: totalEnergy / avgProfile.length,
-            spectralCentroid,
-            spectralRolloff: rolloffIndex,
-            zeroCrossingRate: zeroCrossings,
-            formants
-        };
-    }
-
-    private calculateZeroCrossings(profile: number[]): number {
-        let crossings = 0;
-        const mean = profile.reduce((sum, val) => sum + val, 0) / profile.length;
-
-        for (let i = 1; i < profile.length; i++) {
-            if ((profile[i - 1] - mean) * (profile[i] - mean) < 0) {
-                crossings++;
-            }
-        }
-
-        return crossings / profile.length;
-    }
-
-    private estimateFormants(profile: number[]): number[] {
-        const formants: number[] = [];
-        const smoothedProfile = this.smoothArray(profile);
-
-        // Find local maxima in the lower frequency range (typical for voice formants)
-        for (let i = 1; i < Math.min(smoothedProfile.length - 1, 4000); i++) {
-            if (smoothedProfile[i] > smoothedProfile[i - 1] &&
-                smoothedProfile[i] > smoothedProfile[i + 1] &&
-                smoothedProfile[i] > 50) {
-                formants.push(i);
-                i += 10; // Skip ahead to avoid detecting same formant
-            }
-        }
-
-        return formants.slice(0, 3); // Return first 3 formants
-    }
-
-    private smoothArray(arr: number[], windowSize: number = 5): number[] {
-        const smoothed = [...arr];
-        const half = Math.floor(windowSize / 2);
-
-        for (let i = half; i < arr.length - half; i++) {
-            let sum = 0;
-            for (let j = -half; j <= half; j++) {
-                sum += arr[i + j];
-            }
-            smoothed[i] = sum / windowSize;
-        }
-
-        return smoothed;
-    }
-
-    // Add debug method to set dummy profiles
-    setDummyProfile(player: 'shark' | 'seal') {
-        const dummyFrequencyProfile = new Array(1024).fill(128);
-        const dummyCharacteristics = {
-            peakFrequencies: [100, 200, 300], // Dummy peak frequencies
-            avgEnergy: 128,
-            spectralCentroid: 0,
-            spectralRolloff: 0,
-            zeroCrossingRate: 0,
-            formants: []
-        };
-
-        this.profiles.set(player, {
-            frequencyProfiles: [dummyFrequencyProfile],
-            frequencyCharacteristics: dummyCharacteristics
-        });
-    }
-
     // Add new method to detect simultaneous sounds
     detectSimultaneousSounds(): {
         shark: number,
@@ -397,5 +184,9 @@ export class AudioHandler {
             }
         }
         return peaks.slice(0, 3); // Keep top 3 peaks
+    }
+
+    getSampleRate(): number {
+        return this.audioContext?.sampleRate ?? 44100;
     }
 } 
