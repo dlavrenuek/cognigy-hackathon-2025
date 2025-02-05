@@ -1,0 +1,45 @@
+---
+description: Description of core game mechanics and game design
+globs: 
+---
+# Project: Shark vs Seal - Voice-Controlled Arcade Game
+
+## Core Game Concept
+A 2D two-player browser game built with Kaboom.js where players control characters through voice commands.
+
+## Game Flow
+1. Initial Phase:
+   - Split-screen gameplay
+   - Left side: Shark character
+   - Right side: Seal character
+   - Both characters automatically swim left to right
+   - Players make animal sounds to jump and boost speed
+   - Random obstacles require jumping over
+
+2. Merge Phase:
+   - Screens merge into single view
+   - Seal player: Makes sounds to escape
+   - Shark player: Makes sounds to catch up
+
+## Technical Stack
+- Engine: Kaboom.js
+- Audio Processing: Web Audio API
+- Voice Recognition: Whisper API
+- Platform: Web Browser
+
+## Core Mechanics
+- Voice-controlled jumping
+- Voice-activated speed boosts
+- Obstacle avoidance
+- Split-screen to single-screen transition
+- Collision detection between characters
+
+## Development Approach
+- AI-assisted development
+- LLM-based programming
+- AI-generated animations and assets
+
+## Team Structure
+1. Game Core & Physics
+2. Audio & AI Integration
+3. UI/UX & Assets
