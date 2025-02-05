@@ -22,8 +22,7 @@ export function createStartScene() {
         }
 
         let currentPlayer: 'shark' | 'seal' | null = null;
-        const SAMPLES_NEEDED = 5;
-        const SAMPLE_INTERVAL = 100;
+        const SAMPLES_NEEDED = 3;
 
         const COLORS = {
             shark: k.rgb(128, 128, 128),
@@ -229,9 +228,12 @@ export function createStartScene() {
                 }
 
                 // Get current audio for waveform
-                const dataArray = new Uint8Array(audioHandler.analyzer.frequencyBinCount);
-                audioHandler.analyzer.getByteFrequencyData(dataArray);
-                updateWaveform(zone.waveform, Array.from(dataArray));
+                const analyzer = audioHandler.analyzers.get(player);
+                if (analyzer) {
+                    const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+                    analyzer.getByteFrequencyData(dataArray);
+                    updateWaveform(zone.waveform, Array.from(dataArray));
+                }
             }, 50);
 
             zone.testingLoop = testingLoop;

@@ -1,9 +1,9 @@
 export class AudioHandler {
-    private audioContext: AudioContext
-    public analyzer: AnalyserNode
-    private mediaStream: MediaStream | null = null
+    private audioContexts: Map<string, AudioContext> = new Map()
+    public analyzers: Map<string, AnalyserNode> = new Map()
+    private mediaStreams: Map<string, MediaStream> = new Map()
+    private mediaStreamSources: Map<string, MediaStreamAudioSourceNode> = new Map()
     private isListening: boolean = false
-    private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
     profiles: Map<string, {
         frequencyProfiles: number[][], // Store multiple profiles per player
         frequencyCharacteristics: {
@@ -13,44 +13,50 @@ export class AudioHandler {
     }> = new Map();
     private calibrationData: number[][] = [];
     private isCalibrating: boolean = false;
-    private readonly VOLUME_THRESHOLD = 0.3; // Minimum volume to detect sound
+    private readonly VOLUME_THRESHOLD = 0.15; // Minimum volume to detect sound
     private readonly MIN_SAMPLE_GAP = 500; // Minimum ms between samples
     private lastSampleTime = 0;
     private isCurrentlyRecording = false;
 
     constructor() {
-        this.audioContext = new AudioContext()
-        this.analyzer = this.audioContext.createAnalyser()
-        // Set FFT size for better frequency resolution
-        this.analyzer.fftSize = 2048;
-        // Set smoothing to help reduce noise
-        this.analyzer.smoothingTimeConstant = 0.8;
+        // Remove the single audioContext and analyzer initialization
     }
 
     async setupMicrophone(player: string): Promise<boolean> {
         try {
+            // Create new AudioContext for this player
+            const audioContext = new AudioContext();
+            const analyzer = audioContext.createAnalyser();
+            analyzer.fftSize = 2048;
+            analyzer.smoothingTimeConstant = 0.8;
+
             // Resume audio context if it's suspended
-            if (this.audioContext.state === 'suspended') {
-                await this.audioContext.resume();
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
             }
 
-            this.mediaStream = await navigator.mediaDevices.getUserMedia({
+            const mediaStream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
                 video: false,
             })
 
-            // Store the source node and connect it to the analyzer
-            this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.mediaStream)
-            this.mediaStreamSource.connect(this.analyzer)
+            const mediaStreamSource = audioContext.createMediaStreamSource(mediaStream)
+            mediaStreamSource.connect(analyzer)
 
             // Create a dummy node to prevent audio feedback
-            const silentNode = this.audioContext.createGain();
+            const silentNode = audioContext.createGain();
             silentNode.gain.value = 0;
-            this.analyzer.connect(silentNode);
-            silentNode.connect(this.audioContext.destination);
+            analyzer.connect(silentNode);
+            silentNode.connect(audioContext.destination);
+
+            // Store all components for this player
+            this.audioContexts.set(player, audioContext);
+            this.analyzers.set(player, analyzer);
+            this.mediaStreams.set(player, mediaStream);
+            this.mediaStreamSources.set(player, mediaStreamSource);
 
             this.isListening = true;
-            console.log("Microphone setup complete");
+            console.log(`Microphone setup complete for ${player}`);
             return true;
         } catch (error) {
             console.error(`Failed to setup microphone for ${player}:`, error)
@@ -58,15 +64,15 @@ export class AudioHandler {
         }
     }
 
-    getVolume(): number {
-        if (!this.isListening) return 0
+    getVolume(player: string): number {
+        const analyzer = this.analyzers.get(player);
+        if (!this.isListening || !analyzer) return 0;
 
-        const dataArray = new Uint8Array(this.analyzer.frequencyBinCount)
-        this.analyzer.getByteFrequencyData(dataArray)
+        const dataArray = new Uint8Array(analyzer.frequencyBinCount)
+        analyzer.getByteFrequencyData(dataArray)
 
-        // Calculate average volume
         const average = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length
-        return average / 255 // Normalize to 0-1
+        return average / 255
     }
 
     startCalibration() {
@@ -81,8 +87,12 @@ export class AudioHandler {
             return null;
         }
 
-        const dataArray = new Uint8Array(this.analyzer.frequencyBinCount);
-        this.analyzer.getByteFrequencyData(dataArray);
+        const currentPlayer = this.getCurrentPlayer();
+        const analyzer = this.analyzers.get(currentPlayer);
+        if (!analyzer) return null;
+
+        const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+        analyzer.getByteFrequencyData(dataArray);
         const currentVolume = this.calculateVolume(dataArray);
         console.log("Current volume:", currentVolume);
 
@@ -100,14 +110,14 @@ export class AudioHandler {
 
                 // Take several readings over the sample duration
                 for (let i = 0; i < 3; i++) {
-                    const reading = new Uint8Array(this.analyzer.frequencyBinCount);
-                    this.analyzer.getByteFrequencyData(reading);
+                    const reading = new Uint8Array(analyzer.frequencyBinCount);
+                    analyzer.getByteFrequencyData(reading);
                     readings.push(Array.from(reading));
                     await new Promise(resolve => setTimeout(resolve, sampleDuration / 3));
                 }
 
                 // Average the readings
-                const sample = new Array(this.analyzer.frequencyBinCount).fill(0);
+                const sample = new Array(analyzer.frequencyBinCount).fill(0);
                 for (let i = 0; i < sample.length; i++) {
                     sample[i] = readings.reduce((sum, reading) => sum + reading[i], 0) / readings.length;
                 }
@@ -195,23 +205,43 @@ export class AudioHandler {
     }
 
     cleanup() {
-        if (this.mediaStream) {
-            this.mediaStream.getTracks().forEach(track => track.stop())
+        // Cleanup all audio components for all players
+        for (const [player] of this.mediaStreams) {
+            this.cleanupPlayer(player);
         }
-        if (this.mediaStreamSource) {
-            this.mediaStreamSource.disconnect();
-        }
-        this.analyzer.disconnect();
         this.isListening = false;
     }
 
+    private cleanupPlayer(player: string) {
+        const mediaStream = this.mediaStreams.get(player);
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+        }
+
+        const mediaStreamSource = this.mediaStreamSources.get(player);
+        if (mediaStreamSource) {
+            mediaStreamSource.disconnect();
+        }
+
+        const analyzer = this.analyzers.get(player);
+        if (analyzer) {
+            analyzer.disconnect();
+        }
+
+        this.mediaStreams.delete(player);
+        this.mediaStreamSources.delete(player);
+        this.analyzers.delete(player);
+        this.audioContexts.delete(player);
+    }
+
     testAudioMatch(player: 'shark' | 'seal'): number {
-        if (!this.isListening || !this.profiles.has(player)) {
+        const analyzer = this.analyzers.get(player);
+        if (!this.isListening || !this.profiles.has(player) || !analyzer) {
             return 0;
         }
 
-        const currentAudio = new Uint8Array(this.analyzer.frequencyBinCount);
-        this.analyzer.getByteFrequencyData(currentAudio);
+        const currentAudio = new Uint8Array(analyzer.frequencyBinCount);
+        analyzer.getByteFrequencyData(currentAudio);
 
         // Get current volume
         const currentVolume = this.calculateVolume(currentAudio);
@@ -274,5 +304,11 @@ export class AudioHandler {
             frequencyProfiles: [dummyFrequencyProfile],
             frequencyCharacteristics: dummyCharacteristics
         });
+    }
+
+    // Helper method to get current player during calibration
+    private getCurrentPlayer(): string {
+        // This should be updated to track the current calibrating player
+        return Array.from(this.analyzers.keys())[0] || '';
     }
 } 
