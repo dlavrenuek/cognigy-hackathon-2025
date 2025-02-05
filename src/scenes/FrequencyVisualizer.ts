@@ -7,6 +7,7 @@ export class FrequencyVisualizer {
     private readonly VISUALIZER_WIDTH = 800;
     private readonly VISUALIZER_HEIGHT = 300;
     private bars: any[] = [];
+    private detectionText: any;
 
     constructor(private audioHandler: AudioHandler) {
         // Since audio is already initialized, we can setup immediately
@@ -37,6 +38,14 @@ export class FrequencyVisualizer {
             ]);
             this.bars.push(bar);
         }
+
+        // Add detection text display
+        this.detectionText = k.add([
+            k.text("Listening...", { size: 32 }),
+            k.pos(k.center().x, k.height() * 0.7), // Changed from 0.3 to 0.7 to move it lower
+            k.anchor("center"),
+            k.color(k.rgb(255, 255, 255)),
+        ]);
     }
 
     private async startVisualization() {
@@ -44,6 +53,13 @@ export class FrequencyVisualizer {
         k.onUpdate(() => {
             const { frequencies } = this.audioHandler.getFrequencyData();
             const ranges = this.audioHandler.getFrequencyRanges();
+
+            console.log(frequencies);
+            console.log(ranges);
+
+            // Track if we detect shark or seal frequencies
+            let sharkDetected = false;
+            let sealDetected = false;
 
             // Update each bar
             this.bars.forEach((bar, i) => {
@@ -63,11 +79,35 @@ export class FrequencyVisualizer {
                 } else {
                     bar.color = k.rgb(150, 150, 150); // Grey for other frequencies
                 }
+
+                // Update detection flags
+                if (freq >= ranges.shark.min && freq <= ranges.shark.max && value > 128) {
+                    sharkDetected = true;
+                }
+                if (freq >= ranges.seal.min && freq <= ranges.seal.max && value > 128) {
+                    sealDetected = true;
+                }
             });
+
+            // Update detection text
+            if (sharkDetected && sealDetected) {
+                this.detectionText.text = "Detected: Shark and Seal!";
+                this.detectionText.color = k.rgb(255, 200, 100);
+            } else if (sharkDetected) {
+                this.detectionText.text = "Detected: Shark!";
+                this.detectionText.color = k.rgb(255, 100, 100);
+            } else if (sealDetected) {
+                this.detectionText.text = "Detected: Seal!";
+                this.detectionText.color = k.rgb(100, 100, 255);
+            } else {
+                this.detectionText.text = "Listening...";
+                this.detectionText.color = k.rgb(255, 255, 255);
+            }
         });
     }
 
     cleanup() {
+        this.detectionText.destroy();
         this.bars.forEach(bar => bar.destroy());
     }
 } 
