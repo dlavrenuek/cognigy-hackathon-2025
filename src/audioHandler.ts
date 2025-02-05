@@ -8,12 +8,16 @@ export class AudioHandler {
         frequencyProfiles: number[][], // Store multiple profiles per player
         frequencyCharacteristics: {
             peakFrequencies: number[],
-            avgEnergy: number
+            avgEnergy: number,
+            spectralCentroid: number,
+            spectralRolloff: number,
+            zeroCrossingRate: number,
+            formants: number[]  // Voice formants (resonant frequencies)
         }
     }> = new Map();
     private calibrationData: number[][] = [];
     private isCalibrating: boolean = false;
-    private readonly VOLUME_THRESHOLD = 0.15; // Minimum volume to detect sound
+    private readonly VOLUME_THRESHOLD = 0.3; // Minimum volume to detect sound
     private readonly MIN_SAMPLE_GAP = 500; // Minimum ms between samples
     private lastSampleTime = 0;
     private isCurrentlyRecording = false;
@@ -172,10 +176,6 @@ export class AudioHandler {
     }
 
     private calculateFrequencyCharacteristics(profiles: number[][]) {
-        // Find dominant frequencies across all samples
-        const peakFrequencies: number[] = [];
-        let totalEnergy = 0;
-
         // Average the frequency data across all samples
         const avgProfile = new Array(profiles[0].length).fill(0);
         profiles.forEach(profile => {
@@ -186,22 +186,91 @@ export class AudioHandler {
 
         avgProfile.forEach((val, i) => {
             avgProfile[i] /= profiles.length;
-            totalEnergy += val;
         });
 
         // Find peak frequencies (local maxima)
-        for (let i = 1; i < avgProfile.length - 1; i++) {
-            if (avgProfile[i] > avgProfile[i - 1] &&
-                avgProfile[i] > avgProfile[i + 1] &&
-                avgProfile[i] > 50) { // Minimum peak threshold
-                peakFrequencies.push(i);
+        const peakFrequencies = this.findPeakFrequencies(avgProfile);
+
+        // Calculate spectral centroid (brightness of sound)
+        let numerator = 0;
+        let denominator = 0;
+        avgProfile.forEach((magnitude, i) => {
+            numerator += magnitude * i;
+            denominator += magnitude;
+        });
+        const spectralCentroid = numerator / denominator;
+
+        // Calculate spectral rolloff (frequency below which 85% of spectrum energy lies)
+        const totalEnergy = avgProfile.reduce((sum, val) => sum + val, 0);
+        let energySum = 0;
+        let rolloffIndex = 0;
+        for (let i = 0; i < avgProfile.length; i++) {
+            energySum += avgProfile[i];
+            if (energySum >= totalEnergy * 0.85) {
+                rolloffIndex = i;
+                break;
             }
         }
 
+        // Calculate zero-crossing rate from time domain data
+        const zeroCrossings = this.calculateZeroCrossings(profiles[0]);
+
+        // Estimate formants (resonant frequencies)
+        const formants = this.estimateFormants(avgProfile);
+
         return {
-            peakFrequencies: peakFrequencies.slice(0, 3), // Keep top 3 peaks
-            avgEnergy: totalEnergy / avgProfile.length
+            peakFrequencies: peakFrequencies.slice(0, 3),
+            avgEnergy: totalEnergy / avgProfile.length,
+            spectralCentroid,
+            spectralRolloff: rolloffIndex,
+            zeroCrossingRate: zeroCrossings,
+            formants
         };
+    }
+
+    private calculateZeroCrossings(profile: number[]): number {
+        let crossings = 0;
+        const mean = profile.reduce((sum, val) => sum + val, 0) / profile.length;
+
+        for (let i = 1; i < profile.length; i++) {
+            if ((profile[i - 1] - mean) * (profile[i] - mean) < 0) {
+                crossings++;
+            }
+        }
+
+        return crossings / profile.length;
+    }
+
+    private estimateFormants(profile: number[]): number[] {
+        const formants: number[] = [];
+        const smoothedProfile = this.smoothArray(profile);
+
+        // Find local maxima in the lower frequency range (typical for voice formants)
+        for (let i = 1; i < Math.min(smoothedProfile.length - 1, 4000); i++) {
+            if (smoothedProfile[i] > smoothedProfile[i - 1] &&
+                smoothedProfile[i] > smoothedProfile[i + 1] &&
+                smoothedProfile[i] > 50) {
+                formants.push(i);
+                i += 10; // Skip ahead to avoid detecting same formant
+            }
+        }
+
+        return formants.slice(0, 3); // Return first 3 formants
+    }
+
+    private smoothArray(arr: number[], windowSize: number = 5): number[] {
+        const smoothed = [...arr];
+        const half = Math.floor(windowSize / 2);
+
+        for (let i = half; i < arr.length - half; i++) {
+            let sum = 0;
+            for (let j = -half; j <= half; j++) {
+                sum += arr[i + j];
+            }
+            smoothed[i] = sum / windowSize;
+        }
+
+        return smoothed;
     }
 
     cleanup() {
@@ -242,6 +311,7 @@ export class AudioHandler {
 
         const currentAudio = new Uint8Array(analyzer.frequencyBinCount);
         analyzer.getByteFrequencyData(currentAudio);
+        const currentProfile = Array.from(currentAudio);
 
         // Get current volume
         const currentVolume = this.calculateVolume(currentAudio);
@@ -249,18 +319,37 @@ export class AudioHandler {
             return 0;
         }
 
-        const profile = this.profiles.get(player)!;
+        const storedProfile = this.profiles.get(player)!;
+        const currentCharacteristics = this.calculateFrequencyCharacteristics([currentProfile]);
 
-        // Find current peak frequencies
-        const currentPeaks = this.findPeakFrequencies(Array.from(currentAudio));
-
-        // Compare peak frequencies with stored profile
+        // Calculate weighted match score
         const peakMatch = this.comparePeakFrequencies(
-            currentPeaks,
-            profile.frequencyCharacteristics.peakFrequencies
+            currentCharacteristics.peakFrequencies,
+            storedProfile.frequencyCharacteristics.peakFrequencies
         );
 
-        return peakMatch;
+        const centroidMatch = 1 - Math.abs(
+            currentCharacteristics.spectralCentroid -
+            storedProfile.frequencyCharacteristics.spectralCentroid
+        ) / storedProfile.frequencyCharacteristics.spectralCentroid;
+
+        const rolloffMatch = 1 - Math.abs(
+            currentCharacteristics.spectralRolloff -
+            storedProfile.frequencyCharacteristics.spectralRolloff
+        ) / storedProfile.frequencyCharacteristics.spectralRolloff;
+
+        const zcrMatch = 1 - Math.abs(
+            currentCharacteristics.zeroCrossingRate -
+            storedProfile.frequencyCharacteristics.zeroCrossingRate
+        ) / storedProfile.frequencyCharacteristics.zeroCrossingRate;
+
+        // Weight the different characteristics
+        return (
+            peakMatch * 0.4 +
+            Math.max(0, centroidMatch) * 0.2 +
+            Math.max(0, rolloffMatch) * 0.2 +
+            Math.max(0, zcrMatch) * 0.2
+        );
     }
 
     private findPeakFrequencies(audio: number[]): number[] {
@@ -297,7 +386,11 @@ export class AudioHandler {
         const dummyFrequencyProfile = new Array(1024).fill(128);
         const dummyCharacteristics = {
             peakFrequencies: [100, 200, 300], // Dummy peak frequencies
-            avgEnergy: 128
+            avgEnergy: 128,
+            spectralCentroid: 0,
+            spectralRolloff: 0,
+            zeroCrossingRate: 0,
+            formants: []
         };
 
         this.profiles.set(player, {
