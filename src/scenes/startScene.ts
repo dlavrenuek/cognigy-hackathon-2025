@@ -110,7 +110,6 @@ export function createStartScene() {
             await audioHandler.setupMicrophone(player);
             audioHandler.startCalibration();
 
-            // Check more frequently - every 16ms (roughly 60fps)
             const calibrationLoop = setInterval(async () => {
                 const sample = await audioHandler.captureCalibrationSample();
 
@@ -133,10 +132,18 @@ export function createStartScene() {
 
                         currentPlayer = null;
                     } else {
-                        zone.status.text = `Got ${sampleCount} of 5 samples!\nMake your sound again...`;
+                        zone.status.text = `Got ${sampleCount} of 5 samples!\nWait... Now make your sound again!`;
+                        // Add visual feedback for the waiting period
+                        zone.container.color = COLORS.inactive;
+                        setTimeout(() => {
+                            if (currentPlayer === player) {  // Only if still calibrating
+                                zone.container.color = COLORS[player];
+                                zone.status.text = "Make your sound!";
+                            }
+                        }, 500);  // Match MIN_SAMPLE_GAP
                     }
                 }
-            }, 16); // Check every 16ms instead of 50ms
+            }, 16);
         }
 
         function createFeedbackEffect(x: number, y: number, isGood: boolean) {

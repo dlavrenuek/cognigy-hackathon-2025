@@ -13,9 +13,10 @@ export class AudioHandler {
     }> = new Map();
     private calibrationData: number[][] = [];
     private isCalibrating: boolean = false;
-    private readonly VOLUME_THRESHOLD = 0.15; // Minimum volume to detect sound
+    private readonly VOLUME_THRESHOLD = 0.3; // Minimum volume to detect sound
     private readonly MIN_SAMPLE_GAP = 500; // Minimum ms between samples
     private lastSampleTime = 0;
+    private isCurrentlyRecording = false;
 
     constructor() {
         this.audioContext = new AudioContext()
@@ -71,43 +72,52 @@ export class AudioHandler {
     startCalibration() {
         this.calibrationData = [];
         this.isCalibrating = true;
+        this.isCurrentlyRecording = false;
+        this.lastSampleTime = 0;
     }
 
     async captureCalibrationSample(): Promise<number[] | null> {
-        if (!this.isListening || !this.isCalibrating) {
+        if (!this.isListening || !this.isCalibrating || this.isCurrentlyRecording) {
             return null;
         }
-        console.log("Capturing calibration sample");
+
         const dataArray = new Uint8Array(this.analyzer.frequencyBinCount);
         this.analyzer.getByteFrequencyData(dataArray);
         const currentVolume = this.calculateVolume(dataArray);
         console.log("Current volume:", currentVolume);
+
         // Only capture if there's significant sound and enough time has passed
         const now = Date.now();
         if (currentVolume > this.VOLUME_THRESHOLD &&
             (now - this.lastSampleTime) > this.MIN_SAMPLE_GAP) {
 
-            // Take multiple readings over a short period to get a better sample
-            const sampleDuration = 100; // ms
-            const readings: number[][] = [];
+            this.isCurrentlyRecording = true;
 
-            // Take several readings over the sample duration
-            for (let i = 0; i < 3; i++) {
-                const reading = new Uint8Array(this.analyzer.frequencyBinCount);
-                this.analyzer.getByteFrequencyData(reading);
-                readings.push(Array.from(reading));
-                await new Promise(resolve => setTimeout(resolve, sampleDuration / 3));
+            try {
+                // Take multiple readings over a short period to get a better sample
+                const sampleDuration = 100; // ms
+                const readings: number[][] = [];
+
+                // Take several readings over the sample duration
+                for (let i = 0; i < 3; i++) {
+                    const reading = new Uint8Array(this.analyzer.frequencyBinCount);
+                    this.analyzer.getByteFrequencyData(reading);
+                    readings.push(Array.from(reading));
+                    await new Promise(resolve => setTimeout(resolve, sampleDuration / 3));
+                }
+
+                // Average the readings
+                const sample = new Array(this.analyzer.frequencyBinCount).fill(0);
+                for (let i = 0; i < sample.length; i++) {
+                    sample[i] = readings.reduce((sum, reading) => sum + reading[i], 0) / readings.length;
+                }
+
+                this.calibrationData.push(sample);
+                this.lastSampleTime = now;
+                return sample;
+            } finally {
+                this.isCurrentlyRecording = false;
             }
-
-            // Average the readings
-            const sample = new Array(this.analyzer.frequencyBinCount).fill(0);
-            for (let i = 0; i < sample.length; i++) {
-                sample[i] = readings.reduce((sum, reading) => sum + reading[i], 0) / readings.length;
-            }
-
-            this.calibrationData.push(sample);
-            this.lastSampleTime = now;
-            return sample;
         }
 
         return null;
