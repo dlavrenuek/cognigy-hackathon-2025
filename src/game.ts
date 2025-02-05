@@ -4,13 +4,10 @@ import { createPlayScene } from "./scenes/playScene"
 import { createEndScene } from "./scenes/endScene"
 
 // Asset loading
-k.loadSprite("shark", "sprites/shark_1.png", {
-    sliceX: 1,
-    sliceY: 1,
-})
-k.loadSprite("seal", "sprites/seal.webp")
+k.loadSprite("shark", "sprites/shark_1.png")
+k.loadSprite("seal", "sprites/seal_1.png")
 k.loadSprite("island", "sprites/island.png")
-k.loadSprite("obstacle", "sprites/obstacle.png")
+k.loadSprite("obstacle", "sprites/shark_1.png")
 k.loadSprite("waves1", "sprites/waves1.png")
 
 // Game states
