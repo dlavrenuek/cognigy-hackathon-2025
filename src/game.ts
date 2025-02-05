@@ -2,9 +2,15 @@ import kaboom from "kaboom"
 
 // Initialize Kaboom
 const k = kaboom({
-    width: 1280,
-    height: 720,
+    width: window.innerWidth,
+    height: window.innerHeight,
     background: [0, 180, 255],
+    fullscreen: true,    // This will automatically handle fullscreen mode
+    scale: 1, 
+})
+
+window.addEventListener("resize", () => {
+    k.setFullscreen(!k.isFullscreen())
 })
 
 // Asset loading
