@@ -13,9 +13,16 @@ interface PlayerZone {
 
 export function createStartScene() {
     return k.scene("start", () => {
+        const DEBUG_SKIP_CALIBRATION = true;
         const audioHandler = new AudioHandler();
+
+        if (DEBUG_SKIP_CALIBRATION) {
+            audioHandler.setDummyProfile('shark');
+            audioHandler.setDummyProfile('seal');
+        }
+
         let currentPlayer: 'shark' | 'seal' | null = null;
-        const SAMPLES_NEEDED = 50;
+        const SAMPLES_NEEDED = 5;
         const SAMPLE_INTERVAL = 100;
 
         const COLORS = {
@@ -105,29 +112,45 @@ export function createStartScene() {
             let sampleCount = 0;
 
             zone.container.color = COLORS[player];
-            zone.status.text = "Get ready to make some noise...";
+            zone.status.text = "Make your sound!";
 
             await audioHandler.setupMicrophone(player);
             audioHandler.startCalibration();
 
             const calibrationLoop = setInterval(async () => {
-                if (sampleCount >= SAMPLES_NEEDED) {
-                    clearInterval(calibrationLoop);
-                    audioHandler.finishCalibration(player);
-                    zone.status.text = "Calibration complete! ✓";
-                    currentPlayer = null;
-
-                    // Show test button
-                    zone.testButton.opacity = 1;
-                    zone.testButtonText.opacity = 1;
-                    return;
-                }
-
                 const sample = await audioHandler.captureCalibrationSample();
-                updateWaveform(zone.waveform, sample);
-                sampleCount++;
-                zone.status.text = `Calibrating: ${Math.floor((sampleCount / SAMPLES_NEEDED) * 100)}%`;
-            }, SAMPLE_INTERVAL);
+
+                if (sample) {
+                    updateWaveform(zone.waveform, sample);
+                    sampleCount++;
+
+                    if (sampleCount >= SAMPLES_NEEDED) {
+                        clearInterval(calibrationLoop);
+                        const success = audioHandler.finishCalibration(player);
+
+                        if (success) {
+                            zone.status.text = "Calibration complete! ✓";
+                            zone.testButton.opacity = 1;
+                            zone.testButtonText.opacity = 1;
+                        } else {
+                            zone.status.text = "Failed - Try again";
+                            zone.container.color = COLORS.inactive;
+                        }
+
+                        currentPlayer = null;
+                    } else {
+                        zone.status.text = `Got ${sampleCount} of 5 samples!\nWait... Now make your sound again!`;
+                        // Add visual feedback for the waiting period
+                        zone.container.color = COLORS.inactive;
+                        setTimeout(() => {
+                            if (currentPlayer === player) {  // Only if still calibrating
+                                zone.container.color = COLORS[player];
+                                zone.status.text = "Make your sound!";
+                            }
+                        }, 500);  // Match MIN_SAMPLE_GAP
+                    }
+                }
+            }, 16);
         }
 
         function createFeedbackEffect(x: number, y: number, isGood: boolean) {
@@ -232,11 +255,36 @@ export function createStartScene() {
         }
 
         // Click handlers
-        sharkZone.container.onClick(() => !sharkZone.testingLoop && startCalibration('shark'));
-        sealZone.container.onClick(() => !sealZone.testingLoop && startCalibration('seal'));
+        sharkZone.container.onClick(() => {
+            // Don't start calibration if testing or already calibrating
+            if (!sharkZone.testingLoop && !currentPlayer) {
+                startCalibration('shark');
+            }
+        });
 
-        sharkZone.testButton.onClick(() => startTestingLoop('shark', sharkZone));
-        sealZone.testButton.onClick(() => startTestingLoop('seal', sealZone));
+        sealZone.container.onClick(() => {
+            // Don't start calibration if testing or already calibrating
+            if (!sealZone.testingLoop && !currentPlayer) {
+                startCalibration('seal');
+            }
+        });
+
+        // Test button handlers
+        sharkZone.testButton.onClick(() => {
+            // Stop any ongoing calibration before starting test
+            if (currentPlayer === 'shark') {
+                currentPlayer = null;
+            }
+            startTestingLoop('shark', sharkZone);
+        });
+
+        sealZone.testButton.onClick(() => {
+            // Stop any ongoing calibration before starting test
+            if (currentPlayer === 'seal') {
+                currentPlayer = null;
+            }
+            startTestingLoop('seal', sealZone);
+        });
 
         // Adjust start button position
         const startBtn = k.add([
@@ -256,8 +304,8 @@ export function createStartScene() {
 
         // Update loop
         k.onUpdate(() => {
-            const bothCalibrated = audioHandler.profiles.has('shark') &&
-                audioHandler.profiles.has('seal');
+            const bothCalibrated = DEBUG_SKIP_CALIBRATION ||
+                (audioHandler.profiles.has('shark') && audioHandler.profiles.has('seal'));
             startBtn.opacity = bothCalibrated ? 1 : 0.5;
             startBtn.area.enabled = bothCalibrated;
         });
