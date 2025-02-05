@@ -1,5 +1,5 @@
-import { k } from "../game"
 import { AudioHandler } from "../audioHandler"
+import { k } from "../kaboom"
 
 export function createStartScene() {
     return k.scene("start", () => {
@@ -154,4 +154,4 @@ export function createStartScene() {
             }
         });
     });
-} 
+}

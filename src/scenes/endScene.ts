@@ -1,4 +1,4 @@
-import { k } from "../game"
+import { k } from "../kaboom"
 
 export function createEndScene() {
     return k.scene("end", ({ winner }: { winner: string }) => {
