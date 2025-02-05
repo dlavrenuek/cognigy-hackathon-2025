@@ -1,4 +1,5 @@
 import { k } from "../kaboom"
+import {addListener, removeListener} from "../events.ts";
 
 type Obj = ReturnType<typeof k.add>;
 
@@ -201,14 +202,18 @@ export function createPlayScene() {
             }
         }
 
+        /*
         // Separate jump controls for each player
-        k.onKeyPress("left", () => {
+        // k.onKeyPress("left", () => {
+        k.on("shark", () => {
             jump(shark);
         })
 
-        k.onKeyPress("right", () => {
+        // k.onKeyPress("right", () => {
+        k.on("seal", () => {
             jump(seal);
         })
+            */
 
         // Modify oscillate function to not affect jumping characters
         const oscillate = (obj: Obj) => {
@@ -275,5 +280,17 @@ export function createPlayScene() {
             // Can add logic here for shark catching up to seal
             // For example, if shark's relative position catches up to seal's
         })
+
+        const handleShark = () => jump(shark);
+        const handleSeal = () => jump(seal);
+
+        addListener("shark", handleShark);
+        addListener("seal", handleSeal);
+
+        k.onSceneLeave(() => {
+            removeListener("shark", handleShark);
+            removeListener("seal", handleSeal);
+        })
+        
     })
 } 

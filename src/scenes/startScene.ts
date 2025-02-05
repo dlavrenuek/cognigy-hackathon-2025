@@ -1,6 +1,59 @@
 import { AudioHandler } from "../audioHandler"
 import { k } from "../kaboom"
 import { FrequencyVisualizer } from "./FrequencyVisualizer"
+import { addListener, emit, removeListener } from "../events"
+
+type K = typeof k;
+
+let initialized = false;
+const initialize = (k: K) => {
+    // Create speech recognition object
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+
+    // Configure recognition
+    recognition.continuous = true;        // Keep listening even after results
+    recognition.interimResults = true;    // Get results as they come
+    recognition.lang = 'en-US';          // Set language
+
+    // Start listening
+    recognition.start();
+
+    // Listen for results
+    recognition.onresult = (event) => {
+        // Get the latest result
+        const result = event.results[event.results.length - 1];
+        const transcript = result[0].transcript.toLowerCase();
+        console.log(transcript)
+        // Check for specific words
+        if (transcript.includes('shark')) {
+            emit("shark")
+            console.log('Shark detected!');
+        }
+        if (transcript.includes('seal')) {
+            emit("seal")
+            console.log('Seal detected!');
+        }
+        if (transcript.includes('start')) {
+            emit("start")
+            console.log('Seal detected!');
+        }
+        
+        // Log confidence level (0 to 1)
+        console.log('Confidence:', result[0].confidence);
+    };
+
+    // Handle errors
+    recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+    };
+
+    // Restart when it ends
+    recognition.onend = () => {
+        recognition.start();
+    };
+
+    initialized = true;
+}
 
 export function createStartScene() {
     return k.scene("start", () => {
@@ -50,42 +103,62 @@ export function createStartScene() {
             k.anchor("center"),
         ]);
 
+        k.on("start", () => k.go("play"))
+
         let hasInitialized = false;
 
-        startBtn.onClick(async () => {
-            if (!hasInitialized) {
-                // First click: Initialize audio
-                startBtnText.destroy();  // Remove the initial text
-                const success = await audioHandler.setupMicrophone();
-                if (success) {
-                    hasInitialized = true;
-                    visualizer = new FrequencyVisualizer(audioHandler);
-                    startBtn.color = k.rgb(0, 150, 0);
-                    startBtn.opacity = 1; 
-                    // Update button text
-                    k.add([
-                        k.text("Start Game", { size: 40 }),
-                        k.pos(k.center().add(0, k.height() * 0.35)),
-                        k.anchor("center"),
-                    ]);
-                } else {
-                    // Show error message if microphone setup fails
-                    k.add([
-                        k.text("Please allow microphone access to play", { size: 24 }),
-                        k.pos(k.center().add(0, k.height() * 0.45)),
-                        k.anchor("center"),
-                        k.color(k.rgb(255, 100, 100)),
-                    ]);
-                }
-            } else {
-                // Second click: Start the game
-                k.go("play", { audioHandler });
-            }
-        });
 
-        // Cleanup on scene exit
+
+        const handleStart = () => k.go("play");
+
+        addListener("start", handleStart);
+
         k.onSceneLeave(() => {
-            if (visualizer) {
+            removeListener("start", handleStart);
+        })
+
+
+        startBtn.onClick(async () => {
+
+            if (!initialized) {
+                initialize(k);
+            }
+
+                    /*
+                    if (!hasInitialized) {
+                        // First click: Initialize audio
+                        startBtnText.destroy();  // Remove the initial text
+                        const success = await audioHandler.setupMicrophone();
+                        if (success) {
+                            hasInitialized = true;
+                            visualizer = new FrequencyVisualizer(audioHandler);
+                            startBtn.color = k.rgb(0, 150, 0);
+                            startBtn.opacity = 1; 
+                            // Update button text
+                            k.add([
+                                k.text("Start Game", { size: 40 }),
+                                k.pos(k.center().add(0, k.height() * 0.35)),
+                                k.anchor("center"),
+                            ]);
+                        } else {
+                            // Show error message if microphone setup fails
+                            k.add([
+                                k.text("Please allow microphone access to play", { size: 24 }),
+                                k.pos(k.center().add(0, k.height() * 0.45)),
+                                k.anchor("center"),
+                                k.color(k.rgb(255, 100, 100)),
+                            ]);
+                        }
+                    } else {
+                        // Second click: Start the game
+                        k.go("play", { audioHandler });
+                    }
+                    */
+                });
+
+                // Cleanup on scene exit
+                k.onSceneLeave(() => {
+                    if (visualizer) {
                 visualizer.cleanup();
             }
         });
