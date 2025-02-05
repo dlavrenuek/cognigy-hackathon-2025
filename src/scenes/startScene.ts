@@ -41,10 +41,10 @@ export function createStartScene() {
             k.anchor("center"),
             k.area(),
             k.color(k.rgb(0, 100, 0)),
-            k.opacity(1),
+            k.opacity(0),
         ]);
 
-        k.add([
+        const startBtnText = k.add([
             k.text("Click to Enable Audio", { size: 40 }),
             k.pos(k.center().add(0, k.height() * 0.35)),
             k.anchor("center"),
@@ -55,11 +55,13 @@ export function createStartScene() {
         startBtn.onClick(async () => {
             if (!hasInitialized) {
                 // First click: Initialize audio
+                startBtnText.destroy();  // Remove the initial text
                 const success = await audioHandler.setupMicrophone();
                 if (success) {
                     hasInitialized = true;
                     visualizer = new FrequencyVisualizer(audioHandler);
                     startBtn.color = k.rgb(0, 150, 0);
+                    startBtn.opacity = 1; 
                     // Update button text
                     k.add([
                         k.text("Start Game", { size: 40 }),
