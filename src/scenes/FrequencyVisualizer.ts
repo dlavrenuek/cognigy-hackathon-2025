@@ -28,12 +28,13 @@ export class FrequencyVisualizer {
         // Create bars
         const numBars = Math.floor(this.VISUALIZER_WIDTH / (this.BAR_WIDTH + this.SPACING));
         const startX = k.center().x - (this.VISUALIZER_WIDTH / 2) + (this.BAR_WIDTH / 2);
+        const centerY = k.height() * 0.5;
 
         for (let i = 0; i < numBars; i++) {
             const bar = k.add([
                 k.rect(this.BAR_WIDTH, 2),
-                k.pos(startX + i * (this.BAR_WIDTH + this.SPACING), k.height() * 0.5),
-                k.anchor("bottom"),
+                k.pos(startX + i * (this.BAR_WIDTH + this.SPACING), centerY + this.VISUALIZER_HEIGHT / 2),
+                k.anchor("bot"),
                 k.color(k.rgb(150, 150, 150)),
             ]);
             this.bars.push(bar);
@@ -55,7 +56,7 @@ export class FrequencyVisualizer {
 
                 // Set height based on frequency value
                 const height = Math.max(2, (value / 255) * this.VISUALIZER_HEIGHT);
-                bar.height = height;
+                bar.use(k.rect(this.BAR_WIDTH, height));
 
                 // Color based on frequency range
                 if (freq >= ranges.shark.min && freq <= ranges.shark.max) {

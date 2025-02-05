@@ -5,12 +5,6 @@ export class AudioHandler {
     private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
     private isListening: boolean = false;
     profiles = new Map<string, boolean>();
-    private calibrationData: number[][] = [];
-    private isCalibrating: boolean = false;
-    private readonly VOLUME_THRESHOLD = 0.3; // Minimum volume to detect sound
-    private readonly MIN_SAMPLE_GAP = 500; // Minimum ms between samples
-    private lastSampleTime = 0;
-    private isCurrentlyRecording = false;
 
     // Frequency ranges for each player
     private readonly FREQUENCY_RANGES = {
@@ -172,18 +166,6 @@ export class AudioHandler {
             seal: sealEnergy,
             isSimultaneous
         };
-    }
-
-    private findPeakFrequencies(audio: number[]): number[] {
-        const peaks: number[] = [];
-        for (let i = 1; i < audio.length - 1; i++) {
-            if (audio[i] > audio[i - 1] &&
-                audio[i] > audio[i + 1] &&
-                audio[i] > 50) {
-                peaks.push(i);
-            }
-        }
-        return peaks.slice(0, 3); // Keep top 3 peaks
     }
 
     getSampleRate(): number {
