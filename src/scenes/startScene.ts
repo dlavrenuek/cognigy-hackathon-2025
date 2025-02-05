@@ -1,5 +1,6 @@
 import { AudioHandler } from "../audioHandler"
 import { k } from "../kaboom"
+import { PlayerZoneManager } from "./PlayerZoneManager"
 
 interface PlayerZone {
     container: any;
@@ -9,6 +10,99 @@ interface PlayerZone {
     testButton: any;
     testButtonText: any;
     testingLoop?: number;
+}
+
+function createUIElements() {
+    // Title and instructions
+    k.add([
+        k.text("Shark vs Seal", { size: 72 }),
+        k.pos(k.center().sub(0, k.height() * 0.4)),
+        k.anchor("center"),
+    ])
+
+    k.add([
+        k.text("Calibrate each player's voice", { size: 32 }),
+        k.pos(k.center().sub(0, k.height() * 0.33)),
+        k.anchor("center"),
+    ])
+}
+
+function createPlayerZone(x: number, player: "shark" | "seal"): PlayerZone {
+    const zoneHeight = k.height() * 0.5;
+    const container = k.add([
+        k.rect(350, zoneHeight),
+        k.pos(x, k.height() * 0.5),
+        k.anchor("center"),
+        k.outline(4),
+        k.color(k.rgb(200, 200, 200)), // inactive color
+        k.area(),
+    ]);
+
+    const waveform = k.add([
+        k.rect(330, zoneHeight * 0.8),
+        k.pos(x, k.height() * 0.5),
+        k.anchor("center"),
+        k.color(player === 'shark' ? k.rgb(128, 128, 128) : k.rgb(139, 69, 19)),
+        k.opacity(0.5),
+    ]);
+
+    const label = k.add([
+        k.text(player.toUpperCase(), { size: 32 }),
+        k.pos(x, k.height() * 0.5 - (zoneHeight * 0.44)),
+        k.anchor("center"),
+        k.color(player === 'shark' ? k.rgb(128, 128, 128) : k.rgb(139, 69, 19)),
+    ]);
+
+    const testButton = k.add([
+        k.rect(200, 50),
+        k.pos(x, k.height() * 0.5 + (zoneHeight * 0.45)),
+        k.anchor("center"),
+        k.area(),
+        k.color(k.rgb(100, 100, 100)),
+        k.opacity(0),
+    ]);
+
+    const testButtonText = k.add([
+        k.text("Test Sound", { size: 24 }),
+        k.pos(x, k.height() * 0.5 + (zoneHeight * 0.45)),
+        k.anchor("center"),
+        k.opacity(0),
+    ]);
+
+    const status = k.add([
+        k.text("Click to calibrate", { size: 24 }),
+        k.pos(x, k.height() * 0.5 + (zoneHeight * 0.35)),
+        k.anchor("center"),
+    ]);
+
+    return { container, waveform, label, status, testButton, testButtonText };
+}
+
+function createStartButton(audioHandler: AudioHandler, zones: { shark: PlayerZone, seal: PlayerZone }) {
+    const startBtn = k.add([
+        k.rect(250, 100),
+        k.pos(k.center().add(0, k.height() * 0.35)),
+        k.anchor("center"),
+        k.area(),
+        k.color(k.rgb(0, 100, 0)),
+        k.opacity(0.5),
+    ]);
+
+    k.add([
+        k.text("Start Game", { size: 40 }),
+        k.pos(k.center().add(0, k.height() * 0.35)),
+        k.anchor("center"),
+    ]);
+
+    startBtn.onClick(() => {
+        if (startBtn.area.enabled) {
+            if (zones.shark.testingLoop) clearInterval(zones.shark.testingLoop);
+            if (zones.seal.testingLoop) clearInterval(zones.seal.testingLoop);
+            k.go("play", { audioHandler });
+        }
+    });
+
+    return startBtn;
 }
 
 export function createStartScene() {
@@ -21,287 +115,18 @@ export function createStartScene() {
             audioHandler.setDummyProfile('seal');
         }
 
-        let currentPlayer: 'shark' | 'seal' | null = null;
-        const SAMPLES_NEEDED = 3;
-
-        const COLORS = {
-            shark: k.rgb(128, 128, 128),
-            seal: k.rgb(139, 69, 19),
-            inactive: k.rgb(200, 200, 200)
-        };
-
-        // Title and instructions - adjust vertical positioning
-        k.add([
-            k.text("Shark vs Seal", { size: 72 }),
-            k.pos(k.center().sub(0, k.height() * 0.25)), // Relative to screen height
-            k.anchor("center"),
-        ])
-
-        k.add([
-            k.text("Calibrate each player's voice", { size: 36 }),
-            k.pos(k.center().sub(0, k.height() * 0.18)), // Relative to screen height
-            k.anchor("center"),
-        ])
+        // Create UI elements
+        createUIElements();
 
         // Create visualization zones
-        function createPlayerZone(x: number, player: 'shark' | 'seal'): PlayerZone {
-            const zoneHeight = k.height() * 0.35; // Relative zone height
-            const container = k.add([
-                k.rect(350, zoneHeight),
-                k.pos(x, k.height() * 0.5), // Center vertically
-                k.anchor("center"),
-                k.outline(4),
-                k.color(COLORS.inactive),
-                k.area(),
-            ]);
-
-            const waveform = k.add([
-                k.rect(330, zoneHeight * 0.8),
-                k.pos(x, k.height() * 0.5),
-                k.anchor("center"),
-                k.color(COLORS[player]),
-                k.opacity(0.5),
-            ]);
-
-            const label = k.add([
-                k.text(player.toUpperCase(), { size: 32 }),
-                k.pos(x, k.height() * 0.5 - (zoneHeight * 0.45)),
-                k.anchor("center"),
-                k.color(COLORS[player]),
-            ]);
-
-            const testButton = k.add([
-                k.rect(200, 50),
-                k.pos(x, k.height() * 0.5 + (zoneHeight * 0.45)),
-                k.anchor("center"),
-                k.area(),
-                k.color(k.rgb(100, 100, 100)),
-                k.opacity(0),
-            ]);
-
-            const testButtonText = k.add([
-                k.text("Test Sound", { size: 24 }),
-                k.pos(x, k.height() * 0.5 + (zoneHeight * 0.45)),
-                k.anchor("center"),
-                k.opacity(0),
-            ]);
-
-            // Move status text up a bit to make room for test button
-            const status = k.add([
-                k.text("Click to calibrate", { size: 24 }),
-                k.pos(x, k.height() * 0.5 + (zoneHeight * 0.35)),
-                k.anchor("center"),
-            ]);
-
-            return { container, waveform, label, status, testButton, testButtonText };
-        }
-
         const sharkZone = createPlayerZone(k.width() / 3 - 50, "shark");
         const sealZone = createPlayerZone((k.width() / 3) * 2 + 50, "seal");
 
-        // Calibration logic
-        async function startCalibration(player: 'shark' | 'seal') {
-            if (currentPlayer) return;
+        // Create start button
+        const startBtn = createStartButton(audioHandler, { shark: sharkZone, seal: sealZone });
 
-            const zone = player === 'shark' ? sharkZone : sealZone;
-            zone.testButton.opacity = 0;
-            zone.testButtonText.opacity = 0;
-
-            currentPlayer = player;
-            let sampleCount = 0;
-
-            zone.container.color = COLORS[player];
-            zone.status.text = "Make your sound!";
-
-            await audioHandler.setupMicrophone();
-            audioHandler.startCalibration();
-
-            const calibrationLoop = setInterval(async () => {
-                const sample = await audioHandler.captureCalibrationSample();
-
-                if (sample) {
-                    updateWaveform(zone.waveform, sample, player);
-                    sampleCount++;
-
-                    if (sampleCount >= SAMPLES_NEEDED) {
-                        clearInterval(calibrationLoop);
-                        const success = audioHandler.finishCalibration(player);
-
-                        if (success) {
-                            zone.status.text = "Calibration complete! ✓";
-                            zone.testButton.opacity = 1;
-                            zone.testButtonText.opacity = 1;
-                        } else {
-                            zone.status.text = "Failed - Try again";
-                            zone.container.color = COLORS.inactive;
-                        }
-
-                        currentPlayer = null;
-                    } else {
-                        zone.status.text = `Got ${sampleCount} of 5 samples!\nWait... Now make your sound again!`;
-                        // Add visual feedback for the waiting period
-                        zone.container.color = COLORS.inactive;
-                        setTimeout(() => {
-                            if (currentPlayer === player) {  // Only if still calibrating
-                                zone.container.color = COLORS[player];
-                                zone.status.text = "Make your sound!";
-                            }
-                        }, 500);  // Match MIN_SAMPLE_GAP
-                    }
-                }
-            }, 16);
-        }
-
-        function createFeedbackEffect(x: number, y: number, isGood: boolean) {
-            const size = 40;
-            const effect = k.add([
-                k.circle(size),
-                k.pos(x, y),
-                k.anchor("center"),
-                k.color(isGood ? k.rgb(0, 255, 0) : k.rgb(255, 0, 0)),
-                k.opacity(0.8),
-            ]);
-
-            // Animate the effect
-            k.tween(
-                effect.opacity,
-                0,
-                0.5,
-                (val: number) => effect.opacity = val,
-                k.easings.linear,
-            );
-
-            k.tween(
-                size,
-                size * 2,
-                0.5,
-                (val: number) => effect.radius = val,
-                k.easings.linear,
-            );
-
-            // Remove the effect after animation
-            k.wait(0.5, () => {
-                effect.destroy();
-            });
-        }
-
-        function updateWaveform(waveformObj: any, audioData: number[], player: 'shark' | 'seal') {
-            const points = audioData.filter((_, i) => i % 8 === 0);
-            const maxHeight = 150;
-
-            // Create waveform vertices with highlighted range
-            const vertices = points.map((value, i) => {
-                const x = (i / points.length) * 280;
-                const y = (value / 255) * maxHeight;
-                return k.vec2(x - 140, y - maxHeight / 2);
-            });
-
-            // Remove existing shape components
-            waveformObj.unuse("polygon");
-            waveformObj.unuse("rect");
-            waveformObj.use(k.polygon(vertices));
-
-            // Color the waveform based on if it's in the correct range
-            const { shark, seal, isSimultaneous } = audioHandler.detectSimultaneousSounds();
-            const energy = player === 'shark' ? shark : seal;
-            const otherEnergy = player === 'shark' ? seal : shark;
-
-            if (isSimultaneous) {
-                waveformObj.color = k.rgb(255, 165, 0); // Orange for interference
-            } else if (energy > audioHandler.ENERGY_THRESHOLD && energy > (otherEnergy * 1.5)) {
-                waveformObj.color = k.rgb(0, 255, 0); // Green for good sound
-            } else {
-                waveformObj.color = COLORS[player];
-            }
-        }
-
-        function startTestingLoop(player: 'shark' | 'seal', zone: PlayerZone) {
-            if (zone.testingLoop) {
-                clearInterval(zone.testingLoop);
-                zone.testButton.color = k.rgb(100, 100, 100);
-                zone.testButtonText.text = "Test Sound";
-                zone.status.text = "Ready!";
-                return;
-            }
-
-            zone.testButton.color = k.rgb(200, 50, 50);
-            zone.testButtonText.text = "Stop Test";
-
-            // Add frequency range info to status
-            zone.status.text = player === 'shark'
-                ? "Make a low growling sound!"
-                : "Make a high-pitched bark!";
-
-            let lastMatchTime = 0;
-            const FEEDBACK_COOLDOWN = 300;
-
-            zone.testingLoop = setInterval(() => {
-                const { frequencies } = audioHandler.getFrequencyData();
-                updateWaveform(zone.waveform, Array.from(frequencies), player);
-
-                const matchScore = audioHandler.testAudioMatch(player);
-                const now = Date.now();
-
-                // Create feedback effects with cooldown
-                if (now - lastMatchTime > FEEDBACK_COOLDOWN) {
-                    if (matchScore > 0.6) {
-                        createFeedbackEffect(zone.container.pos.x, zone.container.pos.y, true);
-                        lastMatchTime = now;
-                    } else if (matchScore > 0) {
-                        createFeedbackEffect(zone.container.pos.x, zone.container.pos.y, false);
-                        lastMatchTime = now;
-                    }
-                }
-            }, 50);
-        }
-
-        // Click handlers
-        sharkZone.container.onClick(() => {
-            // Don't start calibration if testing or already calibrating
-            if (!sharkZone.testingLoop && !currentPlayer) {
-                startCalibration('shark');
-            }
-        });
-
-        sealZone.container.onClick(() => {
-            // Don't start calibration if testing or already calibrating
-            if (!sealZone.testingLoop && !currentPlayer) {
-                startCalibration('seal');
-            }
-        });
-
-        // Test button handlers
-        sharkZone.testButton.onClick(() => {
-            // Stop any ongoing calibration before starting test
-            if (currentPlayer === 'shark') {
-                currentPlayer = null;
-            }
-            startTestingLoop('shark', sharkZone);
-        });
-
-        sealZone.testButton.onClick(() => {
-            // Stop any ongoing calibration before starting test
-            if (currentPlayer === 'seal') {
-                currentPlayer = null;
-            }
-            startTestingLoop('seal', sealZone);
-        });
-
-        // Adjust start button position
-        const startBtn = k.add([
-            k.rect(250, 100),
-            k.pos(k.center().add(0, k.height() * 0.35)), // Position relative to screen height
-            k.anchor("center"),
-            k.area(),
-            k.color(k.rgb(0, 100, 0)),
-            k.opacity(0.5),
-        ]);
-
-        const startText = k.add([
-            k.text("Start Game", { size: 40 }),
-            k.pos(k.center().add(0, k.height() * 0.35)), // Match button position
-            k.anchor("center"),
-        ]);
+        // Initialize zone manager
+        const zoneManager = new PlayerZoneManager(audioHandler, sharkZone, sealZone);
 
         // Update loop
         k.onUpdate(() => {
@@ -311,22 +136,12 @@ export function createStartScene() {
             startBtn.area.enabled = bothCalibrated;
         });
 
-        startBtn.onClick(() => {
-            if (startBtn.area.enabled) {
-                // Make sure to clean up testing loops
-                if (sharkZone.testingLoop) clearInterval(sharkZone.testingLoop);
-                if (sealZone.testingLoop) clearInterval(sealZone.testingLoop);
-                k.go("play", { audioHandler });
-            }
-        });
-
         // Update cleanup on scene exit
         k.onSceneLeave(() => {
             if (!startBtn.area.enabled) {
                 audioHandler.cleanup();
             }
-            if (sharkZone.testingLoop) clearInterval(sharkZone.testingLoop);
-            if (sealZone.testingLoop) clearInterval(sealZone.testingLoop);
+            zoneManager.cleanup();
         });
     });
 }
