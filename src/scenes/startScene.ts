@@ -29,13 +29,13 @@ const initialize = (k: K) => {
             emit("shark")
             console.log('Shark detected!');
         }
-        if (transcript.includes('seal')) {
+        if (transcript.includes('seal') || transcript.includes('see')) {
             emit("seal")
             console.log('Seal detected!');
         }
         if (transcript.includes('start')) {
             emit("start")
-            console.log('Seal detected!');
+            console.log('start detected!');
         }
         
         // Log confidence level (0 to 1)

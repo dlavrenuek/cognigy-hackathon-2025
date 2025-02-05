@@ -92,7 +92,7 @@ export function createPlayScene() {
                 }),
                 k.pos(
                     // Space obstacles evenly across the scene
-                    k.width() / 2 + (sceneWidth / (obstacleCount + 1)) / 2 * (i + 1) + Math.random() * 50,
+                    k.width() / 2 + (sceneWidth / (obstacleCount + 1)) / 1.5 * (i + 1) + Math.random() * 50,
                     playerStartPosY
                 ),
                 k.area(),
