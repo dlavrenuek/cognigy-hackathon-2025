@@ -4,7 +4,8 @@ import { createPlayScene } from "./scenes/playScene"
 import { createEndScene } from "./scenes/endScene"
 
 // Asset loading
-k.loadSprite("shark", "sprites/sharks.png", { width: 1000, height: 1000, sliceX: 2, sliceY: 1, 
+k.loadSprite("shark", "sprites/sharks.png", {
+    width: 1000, height: 1000, sliceX: 2, sliceY: 1,
     anims: {
         idle: {
             from: 0,       // First frame index
@@ -12,8 +13,10 @@ k.loadSprite("shark", "sprites/sharks.png", { width: 1000, height: 1000, sliceX:
             loop: true,    // Make it loop
             speed: 4,
         }
-    } })
-k.loadSprite("seal", "sprites/seals.png", { width: 1000, height: 1000, sliceX: 2, sliceY: 1, 
+    }
+})
+k.loadSprite("seal", "sprites/seals.png", {
+    width: 1000, height: 1000, sliceX: 2, sliceY: 1,
     anims: {
         idle: {
             from: 0,       // First frame index
@@ -21,9 +24,12 @@ k.loadSprite("seal", "sprites/seals.png", { width: 1000, height: 1000, sliceX: 2
             loop: true,    // Make it loop
             speed: 4,
         }
-    } })
+    }
+})
 k.loadSprite("island", "sprites/island.png")
-k.loadSprite("obstacle", "sprites/shark_1.png")
+k.loadSprite("boulder", "sprites/boulder.png")
+k.loadSprite("iceberg", "sprites/ice_berg.png")
+k.loadSprite("barrel", "sprites/barrel.png")
 k.loadSprite("waves1", "sprites/waves1.png")
 
 // Game states

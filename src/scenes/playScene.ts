@@ -35,7 +35,7 @@ export function createPlayScene() {
             [153, 228, 255],
             [179, 236, 255]     // Very light blue at bottom
         ];
-        
+
         const bgLayers = bgColors.length;
         const layerHeight = k.height() / bgLayers;
 
@@ -43,7 +43,7 @@ export function createPlayScene() {
         for (let i = 0; i < bgLayers; i++) {
             k.add([
                 k.rect(sceneWidth, layerHeight),
-                k.pos(-k.width()/2, i * layerHeight * 0.6),
+                k.pos(-k.width() / 2, i * layerHeight * 0.6),
                 k.color(...bgColors[i]),
                 k.z(-2),
             ])
@@ -64,7 +64,7 @@ export function createPlayScene() {
                 k.z(i),
                 k.opacity(1 - i * (0.5 / wavesCount)),  // Make slightly transparent
                 {
-                    startY: playerStartPosY + i*i * 3 - 0,  // Store initial Y position
+                    startY: playerStartPosY + i * i * 3 - 0,  // Store initial Y position
                     amplitude: i * 5,           // How far it moves up/down
                     frequency: Math.random() * 3,          // How fast it moves
                     speed: GAME_SPEED * (0.2 + i * 0.4)
@@ -72,13 +72,20 @@ export function createPlayScene() {
             ]))
         }
 
+        // Add this before obstacles creation
+        const obstacleTypes = ["boulder", "iceberg", "barrel"];
+
         // Add obstacles
         const obstacles: Obj[] = [];
         const obstacleCount = 5;
-        
+
+        // Modify the obstacle creation loop
         for (let i = 0; i < obstacleCount; i++) {
+            // Randomly select an obstacle type
+            const randomObstacle = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+
             obstacles.push(k.add([
-                k.sprite("obstacle", {
+                k.sprite(randomObstacle, {
                     width: 100,
                     height: 100,
                 }),
@@ -101,7 +108,7 @@ export function createPlayScene() {
 
         // Modify player setup to include velocity and jumping state
         const shark = k.add([
-            k.sprite("shark", { 
+            k.sprite("shark", {
                 width: 200,
                 height: 200,
             }),
@@ -151,11 +158,11 @@ export function createPlayScene() {
                 isJumping: false,
             },
         ])
-        
+
         shark.play("idle")
         seal.play("idle")
         // After player setup, before jump function
-        
+
         // Collision handling
         const handleCollision = (player: Obj, obstacle: Obj) => {
             // Flash the player red
