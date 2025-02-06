@@ -10,6 +10,9 @@ export function createPlayScene() {
         let phase1: ReturnType<typeof createPhase1> | null = null
         let phase2: ReturnType<typeof createPhase2> | null = null
         let isPaused = false
+        let isTransitioning = false
+        let transitionTimer = 0
+        let nextPhasePositions: { sharkX: number, sealX: number } | null = null
 
         // Create phase 1
         phase1 = createPhase1()
@@ -51,26 +54,44 @@ export function createPlayScene() {
             if (currentPhase === 1 && phase1) {
                 phase1.update()
 
-                if (phase1.isComplete()) {
-                    // Transition to phase 2
-                    currentPhase = 2
-                    const sharkX = phase1.shark.gameObject.pos.x
-                    const sealX = phase1.seal.gameObject.pos.x
-                    phase2 = createPhase2(sharkX, sealX)
-
-                    // Debug collision shapes for phase 2
-                    if (GAME_CONSTANTS.DEBUG_COLLISIONS) {
-                        drawCollisionShape(phase2.shark.gameObject)
-                        drawCollisionShape(phase2.seal.gameObject)
+                if (phase1.isComplete() && !isTransitioning) {
+                    // Start transition to phase 2
+                    isTransitioning = true
+                    phase1.startTransition()
+                    // Store positions for later use
+                    nextPhasePositions = {
+                        sharkX: phase1.shark.gameObject.pos.x,
+                        sealX: phase1.seal.gameObject.pos.x
                     }
+                }
 
-                    phase1.cleanup()
-                    phase1 = null
+                if (isTransitioning) {
+                    transitionTimer += k.dt()
+                    if (transitionTimer >= 1) {
+                        // Complete transition after 1 second
+                        currentPhase = 2
+                        // Clean up phase 1 first
+                        phase1.cleanup()
+                        phase1 = null
+                        // Then create phase 2
+                        if (nextPhasePositions) {
+                            phase2 = createPhase2(
+                                nextPhasePositions.sharkX,
+                                nextPhasePositions.sealX
+                            )
+                            // Add debug collision shapes if needed
+                            if (GAME_CONSTANTS.DEBUG_COLLISIONS) {
+                                drawCollisionShape(phase2.shark.gameObject)
+                                drawCollisionShape(phase2.seal.gameObject)
+                            }
+                        }
+                        isTransitioning = false
+                        nextPhasePositions = null
+                    }
                 }
             } else if (currentPhase === 2 && phase2) {
                 const result = phase2.update()
                 if (result) {
-                    // Game over - result is winner
                     k.go("end", { winner: result })
                 }
             }
