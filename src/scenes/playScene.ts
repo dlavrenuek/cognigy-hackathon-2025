@@ -1,14 +1,13 @@
 import { k } from "../kaboom"
-import {addListener, removeListener} from "../events.ts";
+import { addListener, removeListener } from "../events.ts";
 
 type Obj = ReturnType<typeof k.add>;
-
 export function createPlayScene() {
     return k.scene("play", () => {
         // Game state
         const GAME_SPEED = 100
         const sceneWidth = k.width() * 4;
-        const playerStartPosY = k.height() / 2;
+        const playerStartPosY = k.height() * 0.7;  // Move down to 70% of screen height
         const wavesCount = 7;
         let cameraPos = 0
         let phase = 1;
@@ -17,6 +16,9 @@ export function createPlayScene() {
         // Add after game state constants
         const JUMP_FORCE = 750;
         const GRAVITY = 1200;
+
+        // Add after the game state constants
+        const DEBUG_COLLISIONS = true;
 
         // Split screen setup
         const splitLine = k.add([
@@ -39,6 +41,40 @@ export function createPlayScene() {
 
         const bgLayers = bgColors.length;
         const layerHeight = k.height() / bgLayers;
+
+
+        // Add this helper function before creating objects
+        const drawCollisionShape = (obj: Obj) => {
+            if (!DEBUG_COLLISIONS) return;
+
+            const area = obj.area;
+            if (!area || !area.shape || !(area.shape instanceof k.Polygon)) return;
+
+            const points = area.shape.pts;
+            const offset = area.offset || k.vec2(0, 0);
+
+            // Create debug outline
+            const outline = k.add([
+                {
+                    draw() {
+                        const pos = obj.pos.add(offset);
+                        k.drawLines({
+                            pts: [
+                                ...points.map((p: k.Vec2) => p.add(pos)),
+                                points[0].add(pos)
+                            ],
+                            pos: k.vec2(0, 0),
+                            color: k.rgb(255, 0, 0),
+                            width: 2,
+                        })
+                    },
+                },
+                k.z(100), // Draw above everything
+            ]);
+
+            // Make the outline follow the object
+            obj.onDestroy(() => outline.destroy());
+        }
 
         // Create gradient background layers
         for (let i = 0; i < bgLayers; i++) {
@@ -65,7 +101,7 @@ export function createPlayScene() {
                 k.z(i),
                 k.opacity(1 - i * (0.5 / wavesCount)),  // Make slightly transparent
                 {
-                    startY: playerStartPosY + i * i * 3 - 0,  // Store initial Y position
+                    startY: playerStartPosY + i * i * 3 - 100,  // Store initial Y position
                     amplitude: i * 5,           // How far it moves up/down
                     frequency: Math.random() * 3,          // How fast it moves
                     speed: GAME_SPEED * (0.2 + i * 0.4)
@@ -82,7 +118,6 @@ export function createPlayScene() {
 
         // Modify the obstacle creation loop
         for (let i = 0; i < obstacleCount; i++) {
-            // Randomly select an obstacle type
             const randomObstacle = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
 
             obstacles.push(k.add([
@@ -90,21 +125,33 @@ export function createPlayScene() {
                     width: 100,
                     height: 100,
                 }),
+                k.anchor("center"),
                 k.pos(
-                    // Space obstacles evenly across the scene
                     k.width() / 2 + (sceneWidth / (obstacleCount + 1)) / 1.5 * (i + 1) + Math.random() * 50,
                     playerStartPosY
                 ),
-                k.area(),
+                k.area({
+                    shape: new k.Polygon([
+                        k.vec2(-40, 0),     // Left
+                        k.vec2(-30, -35),   // Top-left
+                        k.vec2(0, -45),     // Top
+                        k.vec2(30, -35),    // Top-right
+                        k.vec2(40, 0),      // Right
+                        k.vec2(30, 35),     // Bottom-right
+                        k.vec2(0, 45),      // Bottom
+                        k.vec2(-30, 35),    // Bottom-left
+                    ])
+                }),
                 k.z(1),
                 "obstacle",
                 {
-                    startY: playerStartPosY + 60,
+                    startY: playerStartPosY,
                     amplitude: 5,
                     frequency: 2 + Math.random() * 2,
                     speed: GAME_SPEED * 3
                 }
             ]))
+            drawCollisionShape(obstacles[obstacles.length - 1]);
         }
 
         // Modify player setup to include velocity and jumping state
@@ -113,15 +160,22 @@ export function createPlayScene() {
                 width: 200,
                 height: 200,
             }),
+            k.anchor("center"),
             k.pos(-k.width() * 0.4, playerStartPosY),
             k.area({
-                width: 200,
-                height: 150,
-                offset: k.vec2(0, -60)  // Offset collision box up by 50px
+                shape: new k.Polygon([
+                    k.vec2(-70, 0),     // Left tip
+                    k.vec2(-40, -30),   // Top fin
+                    k.vec2(-10, -40),   // Upper body
+                    k.vec2(30, -25),    // Head top
+                    k.vec2(70, 0),      // Nose
+                    k.vec2(30, 25),     // Head bottom
+                    k.vec2(-10, 40),    // Lower body
+                    k.vec2(-40, 30),    // Bottom fin
+                ])
             }),
             k.width(200),
             k.height(200),
-            //k.fixed(),
             k.z(1),
             "shark",
             {
@@ -133,21 +187,29 @@ export function createPlayScene() {
                 isJumping: false,
             },
         ])
+        drawCollisionShape(shark);
 
         const seal = k.add([
             k.sprite("seal", {
                 width: 200,
                 height: 200,
             }),
+            k.anchor("center"),
             k.pos(0, playerStartPosY),
             k.area({
-                width: 200,
-                height: 150,
-                offset: k.vec2(0, -60)  // Offset collision box up by 50px
+                shape: new k.Polygon([
+                    k.vec2(-70, 0),     // Tail
+                    k.vec2(-40, -35),   // Upper body
+                    k.vec2(0, -45),     // Head top
+                    k.vec2(40, -30),    // Face top
+                    k.vec2(70, 0),      // Nose
+                    k.vec2(40, 30),     // Face bottom
+                    k.vec2(0, 45),      // Head bottom
+                    k.vec2(-40, 35),    // Lower body
+                ])
             }),
             k.width(200),
             k.height(200),
-            //k.fixed(),
             k.z(1),
             "seal",
             {
@@ -159,6 +221,7 @@ export function createPlayScene() {
                 isJumping: false,
             },
         ])
+        drawCollisionShape(seal);
 
         shark.play("idle")
         seal.play("idle")
@@ -209,18 +272,17 @@ export function createPlayScene() {
             }
         }
 
-        /*
-        // Separate jump controls for each player
-        // k.onKeyPress("left", () => {
-        k.on("shark", () => {
-            jump(shark);
-        })
+        // Modify the keyboard controls section
+        // Remove the env check and enable keyboard controls by default
+        k.onKeyPress("left", () => jump(shark));
+        k.onKeyPress("right", () => jump(seal));
 
-        // k.onKeyPress("right", () => {
-        k.on("seal", () => {
-            jump(seal);
-        })
-            */
+        // Event listener setup for main control method
+        const handleShark = () => jump(shark);
+        const handleSeal = () => jump(seal);
+
+        addListener("shark", handleShark);
+        addListener("seal", handleSeal);
 
         // Modify oscillate function to not affect jumping characters
         const oscillate = (obj: Obj) => {
@@ -288,16 +350,11 @@ export function createPlayScene() {
             // For example, if shark's relative position catches up to seal's
         })
 
-        const handleShark = () => jump(shark);
-        const handleSeal = () => jump(seal);
-
-        addListener("shark", handleShark);
-        addListener("seal", handleSeal);
-
         k.onSceneLeave(() => {
             removeListener("shark", handleShark);
             removeListener("seal", handleSeal);
         })
-        
+
+
     })
 } 
