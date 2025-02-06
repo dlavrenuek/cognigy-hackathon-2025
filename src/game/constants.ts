@@ -42,7 +42,7 @@ export const GAME_CONSTANTS = {
     SEAL_SPEED_BOOST: 400,   // Lower boost for seal
     JUMP_BOOST_DURATION: 0.3,  // Duration of speed boost in seconds
     BOOST_EASE_DURATION: 0.15, // Duration of easing transition
-    ISLAND_POSITION_X: 6500,  // Distance the seal needs to travel to reach the island
+    ISLAND_POSITION_X: 6000,  // Distance the seal needs to travel to reach the island
 
     // Screen boundaries for win conditions
     SCREEN_EXIT_MARGIN: 100,  // How far past screen edge to trigger win
