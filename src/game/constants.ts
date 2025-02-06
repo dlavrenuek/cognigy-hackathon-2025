@@ -35,14 +35,14 @@ export const GAME_CONSTANTS = {
     OBSTACLE_TYPES: ["boulder", "iceberg", "barrel"],
     OBSTACLE_SIZE: 100,
     OBSTACLE_SPACING: k.width() / 1.2,  // Increased base spacing between obstacles
-    OBSTACLE_RANDOM_OFFSET: 1000,        // Reduced random offset to prevent too much variation
+    OBSTACLE_RANDOM_OFFSET: 500,        // Reduced random offset to prevent too much variation
 
     // Phase 2 specific constants
     SHARK_SPEED_BOOST: 600,  // Higher boost for shark
     SEAL_SPEED_BOOST: 400,   // Lower boost for seal
     JUMP_BOOST_DURATION: 0.3,  // Duration of speed boost in seconds
     BOOST_EASE_DURATION: 0.15, // Duration of easing transition
-    ISLAND_POSITION_X: 5000,  // Distance the seal needs to travel to reach the island
+    ISLAND_POSITION_X: 6500,  // Distance the seal needs to travel to reach the island
 
     // Screen boundaries for win conditions
     SCREEN_EXIT_MARGIN: 100,  // How far past screen edge to trigger win
