@@ -72,6 +72,11 @@ export function createPlayer(config: PlayerConfig) {
 
     const handleCollision = (obstacle: any) => {
         player.use(k.color(255, 0, 0))
+        
+        k.wait(0.3, () => {
+            player.unuse("color");
+        })
+
         if (player.collided === 0) {
             player.pos.x -= 50;
             player.collided = 1;

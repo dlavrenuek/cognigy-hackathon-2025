@@ -23,7 +23,7 @@ export function createPhase1() {
     // Create players
     const shark = createPlayer({
         type: "shark" as PlayerType,
-        startX: -k.width() * 0.4
+        startX: -k.width() * 0.35
     })
     const seal = createPlayer({
         type: "seal" as PlayerType,

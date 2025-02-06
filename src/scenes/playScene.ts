@@ -34,6 +34,8 @@ export function createPlayScene() {
             }
         }
 
+        const handleStart = () => k.go("play");
+
         k.onKeyPress("left", handleShark)
         k.onKeyPress("right", handleSeal)
         addListener("shark", handleShark)
@@ -74,7 +76,42 @@ export function createPlayScene() {
                 const result = phase2.update()
 
                 if (result) {
-                    isPaused = true;
+                    if (!isPaused) {
+
+                        isPaused = true;
+                        addListener("start", handleStart);
+    
+                        k.add([
+                            k.text(`${result.toUpperCase()} WINS!`, { size: 64 }),
+                            k.pos(k.center()),
+                            k.anchor("center"),
+                            k.fixed(),
+                            k.z(100),
+                        ])
+                
+                        const restartBtn = k.add([
+                            k.rect(240, 80),
+                            k.pos(k.center().add(0, 200)),
+                            k.anchor("center"),
+                            k.area(),
+                            k.color(0, 255, 0),
+                            k.fixed(),
+                            k.z(100),
+                        ])
+                
+                        k.add([
+                            k.text("Play Again", { size: 32 }),
+                            k.pos(k.center().add(0, 200)),
+                            k.anchor("center"),
+                            k.fixed(),
+                            k.z(100),
+                        ])
+                
+                        restartBtn.onClick(() => {
+                            k.go("start")
+                        })
+                    }
+
                    // k.go("end", { winner: result })
                 }
             }
@@ -84,6 +121,7 @@ export function createPlayScene() {
         k.onSceneLeave(() => {
             removeListener("shark", handleShark)
             removeListener("seal", handleSeal)
+            removeListener("start", handleStart);
             phase1?.cleanup()
             phase2?.cleanup()
         })

@@ -5,7 +5,7 @@ export const GAME_CONSTANTS = {
     GAME_SPEED: 150,
     JUMP_FORCE: 1000,
     GRAVITY: 2250,
-    DEBUG_COLLISIONS: true,
+    DEBUG_COLLISIONS: false,
 
     // Screen layout
     SCENE_WIDTH: k.width() * 4,
