@@ -1,14 +1,26 @@
 import { k } from "../../kaboom"
 import { GAME_CONSTANTS, COLLISION_SHAPES } from "../constants"
 
+// Keep track of the last obstacle's x position
+let lastObstacleX = 0
+
 export function createObstacle(index: number) {
     const randomObstacle = GAME_CONSTANTS.OBSTACLE_TYPES[
         Math.floor(Math.random() * GAME_CONSTANTS.OBSTACLE_TYPES.length)
     ]
 
-    const baseX = k.width() / 2 +
-        (GAME_CONSTANTS.OBSTACLE_SPACING * (index + 1)) +
-        Math.random() * GAME_CONSTANTS.OBSTACLE_RANDOM_OFFSET
+    // Calculate base position with minimum spacing
+    const minSpacing = GAME_CONSTANTS.OBSTACLE_SPACING
+    const randomOffset = Math.random() * GAME_CONSTANTS.OBSTACLE_RANDOM_OFFSET
+
+    // Ensure minimum distance from last obstacle
+    const baseX = Math.max(
+        k.width() / 2 + (minSpacing * (index + 1)) + randomOffset,
+        lastObstacleX + minSpacing
+    )
+
+    // Update last obstacle position
+    lastObstacleX = baseX
 
     const obstacle = k.add([
         k.sprite(randomObstacle, {

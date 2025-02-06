@@ -32,8 +32,8 @@ export const GAME_CONSTANTS = {
     OBSTACLE_COUNT: 5,
     OBSTACLE_TYPES: ["boulder", "iceberg", "barrel"],
     OBSTACLE_SIZE: 100,
-    OBSTACLE_SPACING: k.width() / 1.5, // Base spacing between obstacles
-    OBSTACLE_RANDOM_OFFSET: 1000,      // Random additional spacing
+    OBSTACLE_SPACING: k.width() / 1.2,  // Increased base spacing between obstacles
+    OBSTACLE_RANDOM_OFFSET: 1000,        // Reduced random offset to prevent too much variation
 }
 
 export const COLLISION_SHAPES = {
