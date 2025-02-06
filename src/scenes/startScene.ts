@@ -1,6 +1,4 @@
-import { AudioHandler } from "../audioHandler"
 import { k } from "../kaboom"
-import { FrequencyVisualizer } from "./FrequencyVisualizer"
 import { addListener, emit, removeListener } from "../events"
 
 type K = typeof k;
@@ -59,8 +57,8 @@ const initialize = (k: K) => {
 
 export function createStartScene() {
     return k.scene("start", () => {
-        const audioHandler = new AudioHandler();
-        let visualizer: FrequencyVisualizer | null = null;
+        let shark: any = null;
+        let seal: any = null;
 
         // Create UI elements
         k.add([
@@ -70,24 +68,25 @@ export function createStartScene() {
         ])
 
         k.add([
-            k.text("Make sounds to test!", { size: 32 }),
+            k.text("Say 'shark' or 'seal' to test!", { size: 32 }),
             k.pos(k.center().sub(0, k.height() * 0.33)),
             k.anchor("center"),
         ])
 
-        k.add([
-            k.text("Low growl = Shark (red)", { size: 24 }),
-            k.pos(k.center().sub(0, k.height() * 0.25)),
+        // Add shark and seal sprites
+        shark = k.add([
+            k.sprite("shark"),
+            k.pos(k.width() * 0.4, k.height() * 0.5),
             k.anchor("center"),
-            k.color(k.rgb(255, 100, 100)),
-        ])
+            k.scale(0.15),
+        ]);
 
-        k.add([
-            k.text("High bark = Seal (blue)", { size: 24 }),
-            k.pos(k.center().sub(0, k.height() * 0.2)),
+        seal = k.add([
+            k.sprite("seal"),
+            k.pos(k.width() * 0.6, k.height() * 0.5),
             k.anchor("center"),
-            k.color(k.rgb(100, 100, 255)),
-        ])
+            k.scale(0.15),
+        ]);
 
         // Create start button
         const startBtn = k.add([
@@ -100,69 +99,57 @@ export function createStartScene() {
         ]);
 
         const startBtnText = k.add([
-            k.text("Click to Enable Audio", { size: 40 }),
+            k.text("Click to Enable Voice", { size: 40 }),
             k.pos(k.center().add(0, k.height() * 0.35)),
             k.anchor("center"),
         ]);
 
-        k.on("start", () => k.go("play"))
+        // Add jump animations for shark and seal
+        const handleShark = () => {
+            if (shark) {
+                shark.pos.y -= 50;
+                k.wait(0.5, () => {
+                    if (shark) shark.pos.y += 50;
+                });
+            }
+        };
 
-        let hasInitialized = false;
-
-
+        const handleSeal = () => {
+            if (seal) {
+                seal.pos.y -= 50;
+                k.wait(0.5, () => {
+                    if (seal) seal.pos.y += 50;
+                });
+            }
+        };
 
         const handleStart = () => k.go("play");
 
-        addListener("start", handleStart);
-
-        k.onSceneLeave(() => {
-            removeListener("start", handleStart);
-        })
-
-
-        startBtn.onClick(async () => {
-
+        startBtn.onClick(() => {
             if (!initialized) {
                 initialize(k);
-            }
-
-
-            if (!hasInitialized) {
-                // First click: Initialize audio
-                startBtnText.destroy();  // Remove the initial text
-                const success = await audioHandler.setupMicrophone();
-                if (success) {
-                    hasInitialized = true;
-                    visualizer = new FrequencyVisualizer(audioHandler);
-                    startBtn.color = k.rgb(0, 150, 0);
-                    startBtn.opacity = 1;
-                    // Update button text
-                    k.add([
-                        k.text("Start Game", { size: 40 }),
-                        k.pos(k.center().add(0, k.height() * 0.35)),
-                        k.anchor("center"),
-                    ]);
-                } else {
-                    // Show error message if microphone setup fails
-                    k.add([
-                        k.text("Please allow microphone access to play", { size: 24 }),
-                        k.pos(k.center().add(0, k.height() * 0.45)),
-                        k.anchor("center"),
-                        k.color(k.rgb(255, 100, 100)),
-                    ]);
-                }
+                startBtnText.destroy();
+                startBtn.opacity = 1;
+                k.add([
+                    k.text("Start Game", { size: 40 }),
+                    k.pos(k.center().add(0, k.height() * 0.35)),
+                    k.anchor("center"),
+                ]);
             } else {
-                // Second click: Start the game
-                k.go("play", { audioHandler });
+                k.go("play");
             }
-
         });
+
+        // Add event listeners
+        addListener("shark", handleShark);
+        addListener("seal", handleSeal);
+        addListener("start", handleStart);
 
         // Cleanup on scene exit
         k.onSceneLeave(() => {
-            if (visualizer) {
-                visualizer.cleanup();
-            }
+            removeListener("shark", handleShark);
+            removeListener("seal", handleSeal);
+            removeListener("start", handleStart);
         });
     });
 }
