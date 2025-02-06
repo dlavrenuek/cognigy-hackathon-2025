@@ -2,8 +2,11 @@ import { k } from "../kaboom"
 
 export function createEndScene() {
     return k.scene("end", ({ winner }: { winner: string }) => {
+        // Convert shark/seal to Bruce/Robbie for display
+        const displayName = winner === "shark" ? "BRUCE" : "ROBBIE";
+
         k.add([
-            k.text(`${winner.toUpperCase()} WINS!`, { size: 64 }),
+            k.text(`${displayName} WINS!`, { size: 64 }),
             k.pos(k.center()),
             k.anchor("center"),
         ])

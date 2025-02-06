@@ -1,7 +1,6 @@
 import { k } from "./kaboom"
 import { createStartScene } from "./scenes/startScene"
 import { createPlayScene } from "./scenes/playScene"
-import { createEndScene } from "./scenes/endScene"
 
 // Asset loading
 k.loadSprite("shark", "sprites/sharks.png", {
@@ -36,7 +35,6 @@ k.loadSprite("clouds", "sprites/clouds.png")
 // Create scenes
 createStartScene()
 createPlayScene()
-createEndScene()
 
 // Start the game
 k.go("start")

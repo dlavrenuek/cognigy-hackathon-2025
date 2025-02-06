@@ -16,7 +16,7 @@ export function createPhase2(
     const island = k.add([
         k.sprite("island"),  // Use natural sprite dimensions
         k.scale(2),         // Double the size of the sprite
-        k.pos(GAME_CONSTANTS.ISLAND_POSITION_X, GAME_CONSTANTS.PLAYER_START_Y),
+        k.pos(GAME_CONSTANTS.ISLAND_POSITION_X, GAME_CONSTANTS.PLAYER_START_Y - 200),
         k.anchor("center"),
         k.area({
             shape: new k.Polygon(COLLISION_SHAPES.ISLAND)

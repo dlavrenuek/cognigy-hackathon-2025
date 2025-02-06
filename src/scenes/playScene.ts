@@ -80,7 +80,7 @@ export function createPlayScene() {
 
                         isPaused = true;
                         addListener("start", handleStart);
-    
+
                         k.add([
                             k.text(`${result.toUpperCase()} WINS!`, { size: 64 }),
                             k.pos(k.center()),
@@ -88,7 +88,7 @@ export function createPlayScene() {
                             k.fixed(),
                             k.z(100),
                         ])
-                
+
                         const restartBtn = k.add([
                             k.rect(240, 80),
                             k.pos(k.center().add(0, 200)),
@@ -98,7 +98,7 @@ export function createPlayScene() {
                             k.fixed(),
                             k.z(100),
                         ])
-                
+
                         k.add([
                             k.text("Play Again", { size: 32 }),
                             k.pos(k.center().add(0, 200)),
@@ -106,7 +106,7 @@ export function createPlayScene() {
                             k.fixed(),
                             k.z(100),
                         ])
-                
+
                         restartBtn.onClick(() => {
                             k.go("start")
                         })
