@@ -6,8 +6,6 @@ export const GAME_CONSTANTS = {
     JUMP_FORCE: 1000,
     GRAVITY: 2500,
     DEBUG_COLLISIONS: true,
-    DEBUG_SKIP_TO_PHASE2: true,  // Enable debug skip option
-    DEBUG_SKIP_KEY: "2",         // Key to press to skip to phase 2
 
     // Screen layout
     SCENE_WIDTH: k.width() * 4,
