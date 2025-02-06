@@ -25,6 +25,7 @@ export function createPlayer(config: PlayerConfig) {
         k.height(200),
         k.z(1),
         config.type,
+        "player",
         {
             startY: GAME_CONSTANTS.PLAYER_START_Y,
             amplitude: 10,
@@ -32,6 +33,7 @@ export function createPlayer(config: PlayerConfig) {
             speed: -GAME_CONSTANTS.GAME_SPEED,
             velocity: 0,
             isJumping: false,
+            boostTimeLeft: 0,
         },
     ])
 
@@ -77,11 +79,17 @@ export function createPlayer(config: PlayerConfig) {
 
     player.onCollide("obstacle", handleCollision)
 
+    // Add method to check collision with another game object
+    const isColliding = (other: any) => {
+        return player.isColliding(other)
+    }
+
     return {
         gameObject: player,
         jump,
         updatePhysics,
         oscillate,
-        move
+        move,
+        isColliding
     }
 } 

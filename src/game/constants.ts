@@ -6,6 +6,8 @@ export const GAME_CONSTANTS = {
     JUMP_FORCE: 1000,
     GRAVITY: 2500,
     DEBUG_COLLISIONS: true,
+    DEBUG_SKIP_TO_PHASE2: true,  // Enable debug skip option
+    DEBUG_SKIP_KEY: "2",         // Key to press to skip to phase 2
 
     // Screen layout
     SCENE_WIDTH: k.width() * 4,
@@ -34,6 +36,16 @@ export const GAME_CONSTANTS = {
     OBSTACLE_SIZE: 100,
     OBSTACLE_SPACING: k.width() / 1.2,  // Increased base spacing between obstacles
     OBSTACLE_RANDOM_OFFSET: 1000,        // Reduced random offset to prevent too much variation
+
+    // Phase 2 specific constants
+    JUMP_SPEED_BOOST: 300,  // Speed boost while jumping
+    JUMP_BOOST_DURATION: 0.5,  // Duration of speed boost in seconds
+    ISLAND_WIDTH: 400,
+    ISLAND_HEIGHT: 300,
+    ISLAND_POSITION_X: 5000,  // Distance the seal needs to travel to reach the island
+
+    // Screen boundaries for win conditions
+    SCREEN_EXIT_MARGIN: 100,  // How far past screen edge to trigger win
 }
 
 export const COLLISION_SHAPES = {
