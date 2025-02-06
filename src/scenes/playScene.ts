@@ -5,7 +5,7 @@ type Obj = ReturnType<typeof k.add>;
 export function createPlayScene() {
     return k.scene("play", () => {
         // Game state
-        const GAME_SPEED = 100
+        const GAME_SPEED = 150
         const sceneWidth = k.width() * 4;
         const playerStartPosY = k.height() * 0.7;  // Move down to 70% of screen height
         const wavesCount = 7;
@@ -14,8 +14,8 @@ export function createPlayScene() {
         let isPaused = false;
 
         // Add after game state constants
-        const JUMP_FORCE = 750;
-        const GRAVITY = 1200;
+        const JUMP_FORCE = 1000;
+        const GRAVITY = 2500;
 
         // Add after the game state constants
         const DEBUG_COLLISIONS = true;
