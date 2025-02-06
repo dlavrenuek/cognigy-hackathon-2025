@@ -31,7 +31,7 @@ export const GAME_CONSTANTS = {
     PHASE_TRANSITION_BUFFER: k.width() * 0.2, // Extra buffer after last obstacle before phase 2
 
     // Obstacle configuration
-    OBSTACLE_COUNT: 1,
+    OBSTACLE_COUNT: 5,
     OBSTACLE_TYPES: ["boulder", "iceberg", "barrel"],
     OBSTACLE_SIZE: 100,
     OBSTACLE_SPACING: k.width() / 1.2,  // Increased base spacing between obstacles
