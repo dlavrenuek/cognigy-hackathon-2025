@@ -64,8 +64,14 @@ const initialize = (k: K) => {
 
 export function createStartScene() {
     return k.scene("start", () => {
-        let shark: any = null;
-        let seal: any = null;
+        const shark = createPlayer({
+            type: "shark" as PlayerType,
+            startX: k.width() / 3
+        });
+        const seal = createPlayer({
+            type: "seal" as PlayerType,
+            startX: (k.width() / 3) * 2
+        });
 
         // Create UI elements
         k.add([
@@ -79,17 +85,6 @@ export function createStartScene() {
             k.pos(k.center().sub(0, k.height() * 0.33)),
             k.anchor("center"),
         ])
-
-        // Add shark and seal sprites
-        shark = createPlayer({
-            type: "shark" as PlayerType,
-            startX: 380
-        })
-
-        seal = createPlayer({
-            type: "seal" as PlayerType,
-            startX: 780
-        })
 
         // Create start button
         const startBtn = k.add([
