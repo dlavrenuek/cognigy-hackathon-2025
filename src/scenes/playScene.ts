@@ -127,7 +127,7 @@ export function createPlayScene() {
                 }),
                 k.anchor("center"),
                 k.pos(
-                    k.width() / 2 + (sceneWidth / (obstacleCount + 1)) / 1.5 * (i + 1) + Math.random() * 50,
+                    k.width() / 2 + (sceneWidth / (obstacleCount + 1)) / 1.5 * (i + 1) + Math.random() * 1000,
                     playerStartPosY
                 ),
                 k.area({
