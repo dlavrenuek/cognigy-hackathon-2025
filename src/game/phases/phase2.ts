@@ -23,7 +23,14 @@ export function createPhase2(
 
     // Add speed boost properties to players
     shark.gameObject.boostTimeLeft = 0
+    shark.gameObject.boostTransition = 0
     seal.gameObject.boostTimeLeft = 0
+    seal.gameObject.boostTransition = 0
+
+    // Helper function for easing
+    const easeInOutQuad = (t: number): number => {
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
+    }
 
     // Modify jump function to add speed boost
     const originalSharkJump = shark.jump
@@ -53,20 +60,26 @@ export function createPhase2(
     })
 
     const update = () => {
-        // Update speed boosts
-        if (shark.gameObject.boostTimeLeft > 0) {
-            shark.gameObject.speed = -GAME_CONSTANTS.GAME_SPEED - GAME_CONSTANTS.JUMP_SPEED_BOOST
-            shark.gameObject.boostTimeLeft -= k.dt()
-        } else {
-            shark.gameObject.speed = -GAME_CONSTANTS.GAME_SPEED
+        // Update speed boosts with smooth transitions
+        const updatePlayerSpeed = (player: any, isShark: boolean) => {
+            if (player.gameObject.boostTimeLeft > 0) {
+                // During boost
+                player.gameObject.boostTimeLeft -= k.dt()
+                player.gameObject.boostTransition = Math.min(1, player.gameObject.boostTransition + k.dt() / GAME_CONSTANTS.BOOST_EASE_DURATION)
+            } else {
+                // Ending boost
+                player.gameObject.boostTransition = Math.max(0, player.gameObject.boostTransition - k.dt() / GAME_CONSTANTS.BOOST_EASE_DURATION)
+            }
+
+            // Calculate speed using easing with different boost amounts for shark and seal
+            const boostSpeed = isShark ? GAME_CONSTANTS.SHARK_SPEED_BOOST : GAME_CONSTANTS.SEAL_SPEED_BOOST
+            const boostAmount = easeInOutQuad(player.gameObject.boostTransition) * boostSpeed
+            player.gameObject.speed = -GAME_CONSTANTS.GAME_SPEED - boostAmount
         }
 
-        if (seal.gameObject.boostTimeLeft > 0) {
-            seal.gameObject.speed = -GAME_CONSTANTS.GAME_SPEED - GAME_CONSTANTS.JUMP_SPEED_BOOST
-            seal.gameObject.boostTimeLeft -= k.dt()
-        } else {
-            seal.gameObject.speed = -GAME_CONSTANTS.GAME_SPEED
-        }
+        // Update both players with their respective boost speeds
+        updatePlayerSpeed(shark, true)   // true for shark
+        updatePlayerSpeed(seal, false)   // false for seal
 
         // Camera follows midpoint between players
         const midPoint = (shark.gameObject.pos.x + seal.gameObject.pos.x) / 2
