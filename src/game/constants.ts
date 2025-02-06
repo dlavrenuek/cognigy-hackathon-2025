@@ -14,6 +14,8 @@ export const GAME_CONSTANTS = {
 
     // Wave configuration
     WAVES_COUNT: 7,
+    // Wave configuration
+    CLOUDS_CLOUNT: 10,
 
     // Background colors
     BG_COLORS: [

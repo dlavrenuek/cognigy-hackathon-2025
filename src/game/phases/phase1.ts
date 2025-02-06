@@ -4,6 +4,7 @@ import { createPlayer, PlayerType } from "../entities/player"
 import { createObstacle } from "../entities/obstacle"
 import { createWaves } from "../entities/waves"
 import { createBackground } from "../entities/background"
+import { createClouds } from "../entities/clouds"
 
 export function createPhase1() {
     // Create split line
@@ -18,7 +19,7 @@ export function createPhase1() {
     // Create background elements
     const background = createBackground()
     const waves = createWaves()
-
+    const clouds = createClouds()
     // Create players
     const shark = createPlayer({
         type: "shark" as PlayerType,
@@ -37,6 +38,7 @@ export function createPhase1() {
         k.fixed(),
         k.z(-1)
     ]);
+
 
     // Create obstacles
     const obstacles = Array.from({ length: GAME_CONSTANTS.OBSTACLE_COUNT })
@@ -64,6 +66,7 @@ export function createPhase1() {
 
         waves.oscillate()
         waves.move()
+        clouds.move()
 
             // Update players
             ;[shark, seal].forEach(player => {
