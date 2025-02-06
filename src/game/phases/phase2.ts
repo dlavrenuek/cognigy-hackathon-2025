@@ -1,23 +1,14 @@
 import { k } from "../../kaboom"
-import { GAME_CONSTANTS } from "../constants"
-import { createPlayer, PlayerType } from "../entities/player"
-import { createWaves } from "../entities/waves"
-import { createBackground } from "../entities/background"
 
-export function createPhase2(sharkStartX: number, sealStartX: number) {
-    // Create background elements
-    const background = createBackground()
-    const waves = createWaves()
-
-    // Create players at their current positions from phase 1
-    const shark = createPlayer({
-        type: "shark" as PlayerType,
-        startX: sharkStartX
-    })
-    const seal = createPlayer({
-        type: "seal" as PlayerType,
-        startX: sealStartX
-    })
+export function createPhase2(
+    existingObjects: {
+        shark: any,
+        seal: any,
+        waves: any,
+        background: any
+    }
+) {
+    const { shark, seal, waves, background } = existingObjects
 
     const update = () => {
         // Camera follows midpoint between players

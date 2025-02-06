@@ -43,7 +43,7 @@ export function createPhase1() {
             cameraPos += GAME_CONSTANTS.GAME_SPEED * k.dt()
             k.camPos(k.vec2(cameraPos, k.height() / 2))
         } else {
-            // Smooth transition over 1 second
+            // Update transition progress
             transitionProgress = Math.min(transitionProgress + k.dt(), 1)
             const easedProgress = easeInOutCubic(transitionProgress)
 
@@ -70,6 +70,9 @@ export function createPhase1() {
             obstacle.oscillate()
             obstacle.move()
         })
+
+        // Return transition completion status
+        return isTransitioning && transitionProgress >= 1
     }
 
     const startTransition = () => {
@@ -101,7 +104,10 @@ export function createPhase1() {
     return {
         shark,
         seal,
+        waves,
+        background,
         obstacles,
+        splitLine,
         update,
         cleanup,
         isComplete,
