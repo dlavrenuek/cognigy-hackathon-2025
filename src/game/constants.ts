@@ -4,7 +4,7 @@ export const GAME_CONSTANTS = {
     // Game mechanics
     GAME_SPEED: 150,
     JUMP_FORCE: 1000,
-    GRAVITY: 2500,
+    GRAVITY: 2250,
     DEBUG_COLLISIONS: true,
 
     // Screen layout
