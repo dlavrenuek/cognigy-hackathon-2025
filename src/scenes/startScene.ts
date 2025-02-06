@@ -1,5 +1,6 @@
 import { k } from "../kaboom"
 import { addListener, emit, removeListener } from "../events"
+import { createPlayer, PlayerType } from "../game/entities/player"
 
 type K = typeof k;
 
@@ -74,19 +75,15 @@ export function createStartScene() {
         ])
 
         // Add shark and seal sprites
-        shark = k.add([
-            k.sprite("shark"),
-            k.pos(k.width() * 0.4, k.height() * 0.5),
-            k.anchor("center"),
-            k.scale(0.15),
-        ]);
+        shark = createPlayer({
+            type: "shark" as PlayerType,
+            startX: 380
+        })
 
-        seal = k.add([
-            k.sprite("seal"),
-            k.pos(k.width() * 0.6, k.height() * 0.5),
-            k.anchor("center"),
-            k.scale(0.15),
-        ]);
+        seal = createPlayer({
+            type: "seal" as PlayerType,
+            startX: 780
+        })
 
         // Create start button
         const startBtn = k.add([
@@ -106,22 +103,22 @@ export function createStartScene() {
 
         // Add jump animations for shark and seal
         const handleShark = () => {
-            if (shark) {
-                shark.pos.y -= 50;
-                k.wait(0.5, () => {
-                    if (shark) shark.pos.y += 50;
-                });
-            }
-        };
-
+            console.log("shark")
+            shark.jump()
+        }
         const handleSeal = () => {
-            if (seal) {
-                seal.pos.y -= 50;
-                k.wait(0.5, () => {
-                    if (seal) seal.pos.y += 50;
-                });
-            }
-        };
+            seal.jump()
+        }
+
+        k.onUpdate(() => {
+            // Update players
+            ;[shark, seal].forEach(player => {
+                player.updatePhysics()
+                if (!player.gameObject.isJumping) {
+                    player.oscillate()
+                }
+            })
+        })
 
         const handleStart = () => k.go("play");
 
