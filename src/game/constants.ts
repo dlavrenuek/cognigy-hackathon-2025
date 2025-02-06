@@ -40,8 +40,6 @@ export const GAME_CONSTANTS = {
     SEAL_SPEED_BOOST: 400,   // Lower boost for seal
     JUMP_BOOST_DURATION: 0.3,  // Duration of speed boost in seconds
     BOOST_EASE_DURATION: 0.15, // Duration of easing transition
-    ISLAND_WIDTH: 400,
-    ISLAND_HEIGHT: 300,
     ISLAND_POSITION_X: 5000,  // Distance the seal needs to travel to reach the island
 
     // Screen boundaries for win conditions
@@ -80,5 +78,12 @@ export const COLLISION_SHAPES = {
         k.vec2(30, 35),     // Bottom-right
         k.vec2(0, 45),      // Bottom
         k.vec2(-30, 35),    // Bottom-left
-    ]
+    ],
+
+    ISLAND: [
+        k.vec2(-250, -100),   // Top-left
+        k.vec2(0, -100),    // Top-right
+        k.vec2(0, 100),     // Bottom-right
+        k.vec2(-250, 100),    // Bottom-left
+    ],
 } 

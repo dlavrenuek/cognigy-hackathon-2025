@@ -1,5 +1,6 @@
 import { k } from "../../kaboom"
 import { GAME_CONSTANTS } from "../constants"
+import { COLLISION_SHAPES } from "../constants"
 
 export function createPhase2(
     existingObjects: {
@@ -11,13 +12,15 @@ export function createPhase2(
 ) {
     const { shark, seal, waves, background } = existingObjects
 
-    // Create island (placeholder)
+    // Create island using original sprite dimensions with double size
     const island = k.add([
-        k.rect(GAME_CONSTANTS.ISLAND_WIDTH, GAME_CONSTANTS.ISLAND_HEIGHT),
+        k.sprite("island"),  // Use natural sprite dimensions
+        k.scale(2),         // Double the size of the sprite
         k.pos(GAME_CONSTANTS.ISLAND_POSITION_X, GAME_CONSTANTS.PLAYER_START_Y),
         k.anchor("center"),
-        k.color(k.rgb(240, 200, 140)), // Sandy color
-        k.area(),
+        k.area({
+            shape: new k.Polygon(COLLISION_SHAPES.ISLAND)
+        }),
         "island"
     ])
 
@@ -62,12 +65,13 @@ export function createPhase2(
     const update = () => {
         // Update speed boosts with smooth transitions
         const updatePlayerSpeed = (player: any, isShark: boolean) => {
-            if (player.gameObject.boostTimeLeft > 0) {
+            // Only handle boost when jumping for both shark and seal
+            if (player.gameObject.isJumping && player.gameObject.boostTimeLeft > 0) {
                 // During boost
                 player.gameObject.boostTimeLeft -= k.dt()
                 player.gameObject.boostTransition = Math.min(1, player.gameObject.boostTransition + k.dt() / GAME_CONSTANTS.BOOST_EASE_DURATION)
             } else {
-                // Ending boost
+                // Ending boost - fade out
                 player.gameObject.boostTransition = Math.max(0, player.gameObject.boostTransition - k.dt() / GAME_CONSTANTS.BOOST_EASE_DURATION)
             }
 

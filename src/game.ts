@@ -31,6 +31,7 @@ k.loadSprite("boulder", "sprites/boulder.png")
 k.loadSprite("iceberg", "sprites/ice_berg.png")
 k.loadSprite("barrel", "sprites/barrel.png")
 k.loadSprite("waves1", "sprites/waves1.png")
+k.loadSprite("island", "sprites/island.png")
 
 // Game states
 type GameState = "start" | "play" | "end"
