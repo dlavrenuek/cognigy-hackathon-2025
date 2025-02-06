@@ -32,7 +32,7 @@ export function createPhase1() {
     const sunSize = Math.min(k.width(), k.height()) * 0.2;
     const sun = k.add([
         k.circle(sunSize),
-        k.pos((k.width() - sunSize) / 2, (k.height()) / 2),
+        k.pos(k.width() / 2, k.height() / 2),
         k.color(255, 255, 0),
         k.fixed(),
         k.z(-1)
