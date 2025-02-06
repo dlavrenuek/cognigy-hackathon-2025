@@ -34,6 +34,7 @@ export function createPlayer(config: PlayerConfig) {
             velocity: 0,
             isJumping: false,
             boostTimeLeft: 0,
+            collided: 0
         },
     ])
 
@@ -71,10 +72,16 @@ export function createPlayer(config: PlayerConfig) {
 
     const handleCollision = (obstacle: any) => {
         player.use(k.color(255, 0, 0))
+        if (player.collided === 0) {
+            player.pos.x -= 50;
+            player.collided = 1;
+        }
+        /*
         k.wait(0.5, () => {
             const winner = config.type === "shark" ? "seal" : "shark"
             k.go("end", { winner })
         })
+        */
     }
 
     player.onCollide("obstacle", handleCollision)

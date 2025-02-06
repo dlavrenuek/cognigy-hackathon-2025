@@ -72,8 +72,10 @@ export function createPlayScene() {
                 }
             } else if (currentPhase === 2 && phase2) {
                 const result = phase2.update()
+
                 if (result) {
-                    k.go("end", { winner: result })
+                    isPaused = true;
+                   // k.go("end", { winner: result })
                 }
             }
         })
