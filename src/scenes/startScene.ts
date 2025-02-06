@@ -1,6 +1,7 @@
 import { k } from "../kaboom"
 import { addListener, emit, removeListener } from "../events"
 import { createPlayer, PlayerType } from "../game/entities/player"
+import { playJumpSound, startBackgroundMusic } from "../game/entities/audio";
 
 type K = typeof k;
 
@@ -106,9 +107,11 @@ export function createStartScene() {
         const handleShark = () => {
             console.log("shark")
             shark.jump()
+            playJumpSound();
         }
         const handleSeal = () => {
             seal.jump()
+            playJumpSound();
         }
 
         k.onUpdate(() => {
@@ -125,6 +128,7 @@ export function createStartScene() {
 
         startBtn.onClick(() => {
             if (!initialized) {
+                startBackgroundMusic();
                 initialize(k);
                 startBtnText.destroy();
                 startBtn.opacity = 1;

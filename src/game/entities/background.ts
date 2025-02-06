@@ -6,7 +6,7 @@ export function createBackground() {
 
     const layers = GAME_CONSTANTS.BG_COLORS.map((color, i) => {
         return k.add([
-            k.rect(GAME_CONSTANTS.SCENE_WIDTH, layerHeight),
+            k.rect(GAME_CONSTANTS.SCENE_WIDTH * 2, layerHeight),
             k.pos(-k.width() / 2, i * layerHeight * 0.6),
             k.color(...color),
             k.z(-2),

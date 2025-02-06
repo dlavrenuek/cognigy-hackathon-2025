@@ -3,6 +3,7 @@ import { addListener, removeListener } from "../events"
 import { createPhase1 } from "../game/phases/phase1"
 import { createPhase2 } from "../game/phases/phase2"
 import { GAME_CONSTANTS } from "../game/constants"
+import { playJumpSound } from "../game/entities/audio"
 
 export function createPlayScene() {
     return k.scene("play", () => {
@@ -20,6 +21,7 @@ export function createPlayScene() {
 
         // Set up controls
         const handleShark = () => {
+            playJumpSound();
             if (currentPhase === 1) {
                 phase1?.shark.jump()
             } else {
@@ -27,6 +29,7 @@ export function createPlayScene() {
             }
         }
         const handleSeal = () => {
+            playJumpSound();
             if (currentPhase === 1) {
                 phase1?.seal.jump()
             } else {

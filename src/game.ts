@@ -32,6 +32,8 @@ k.loadSprite("barrel", "sprites/barrel.png")
 k.loadSprite("waves1", "sprites/waves1.png")
 k.loadSprite("clouds", "sprites/clouds.png")
 
+
+
 // Create scenes
 createStartScene()
 createPlayScene()
