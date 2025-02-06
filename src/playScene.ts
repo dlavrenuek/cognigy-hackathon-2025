@@ -1,8 +1,8 @@
-import { k } from "../kaboom"
-import { addListener, removeListener } from "../events"
-import { createPhase1 } from "../game/phases/phase1"
-import { createPhase2 } from "../game/phases/phase2"
-import { GAME_CONSTANTS } from "../game/constants"
+import { k } from "./kaboom"
+import { addListener, removeListener } from "./events"
+import { createPhase1 } from "./game/phases/phase1"
+import { createPhase2 } from "./game/phases/phase2"
+import { GAME_CONSTANTS } from "./game/constants"
 
 export function createPlayScene() {
     return k.scene("play", () => {
@@ -15,20 +15,8 @@ export function createPlayScene() {
         phase1 = createPhase1()
 
         // Set up controls
-        const handleShark = () => {
-            if (currentPhase === 1) {
-                phase1?.shark.jump()
-            } else {
-                phase2?.shark.jump()
-            }
-        }
-        const handleSeal = () => {
-            if (currentPhase === 1) {
-                phase1?.seal.jump()
-            } else {
-                phase2?.seal.jump()
-            }
-        }
+        const handleShark = () => phase1?.shark.jump()
+        const handleSeal = () => phase1?.seal.jump()
 
         k.onKeyPress("left", handleShark)
         k.onKeyPress("right", handleSeal)
@@ -57,13 +45,6 @@ export function createPlayScene() {
                     const sharkX = phase1.shark.gameObject.pos.x
                     const sealX = phase1.seal.gameObject.pos.x
                     phase2 = createPhase2(sharkX, sealX)
-
-                    // Debug collision shapes for phase 2
-                    if (GAME_CONSTANTS.DEBUG_COLLISIONS) {
-                        drawCollisionShape(phase2.shark.gameObject)
-                        drawCollisionShape(phase2.seal.gameObject)
-                    }
-
                     phase1.cleanup()
                     phase1 = null
                 }
@@ -100,7 +81,7 @@ export function createPlayScene() {
                         const pos = obj.pos.add(offset)
                         k.drawLines({
                             pts: [
-                                ...points.map((p: any) => p.add(pos)),
+                                ...points.map((p: k.Vec2) => p.add(pos)),
                                 points[0].add(pos)
                             ],
                             pos: k.vec2(0, 0),
