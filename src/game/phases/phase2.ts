@@ -65,12 +65,13 @@ export function createPhase2(
     const update = () => {
         // Update speed boosts with smooth transitions
         const updatePlayerSpeed = (player: any, isShark: boolean) => {
-            if (player.gameObject.boostTimeLeft > 0) {
+            // Only handle boost when jumping for both shark and seal
+            if (player.gameObject.isJumping && player.gameObject.boostTimeLeft > 0) {
                 // During boost
                 player.gameObject.boostTimeLeft -= k.dt()
                 player.gameObject.boostTransition = Math.min(1, player.gameObject.boostTransition + k.dt() / GAME_CONSTANTS.BOOST_EASE_DURATION)
             } else {
-                // Ending boost
+                // Ending boost - fade out
                 player.gameObject.boostTransition = Math.max(0, player.gameObject.boostTransition - k.dt() / GAME_CONSTANTS.BOOST_EASE_DURATION)
             }
 

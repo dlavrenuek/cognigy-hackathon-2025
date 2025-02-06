@@ -63,12 +63,7 @@ export function createPlayScene() {
 
                 if (transitionComplete) {
                     // Create phase 2 with existing objects
-                    phase2 = createPhase2({
-                        shark: phase1.shark,
-                        seal: phase1.seal,
-                        waves: phase1.waves,
-                        background: phase1.background
-                    })
+                    phase2 = createPhase2(phase1)
 
                     // Don't cleanup phase1 objects since we're reusing them
                     phase1 = null
