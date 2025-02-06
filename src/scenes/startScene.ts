@@ -23,23 +23,25 @@ const initialize = (k: K) => {
         // Get the latest result
         const result = event.results[event.results.length - 1];
         const transcript = result[0].transcript.toLowerCase();
-        console.log(transcript)
-        // Check for specific words
-        if (transcript.includes('shark')) {
-            emit("shark")
-            console.log('Shark detected!');
-        }
-        if (transcript.includes('seal') || transcript.includes('see')) {
-            emit("seal")
-            console.log('Seal detected!');
-        }
-        if (transcript.includes('start')) {
-            emit("start")
-            console.log('start detected!');
-        }
 
-        // Log confidence level (0 to 1)
-        console.log('Confidence:', result[0].confidence);
+        if (!result.isFinal) {
+            // Check for specific words
+            console.log("transcript", transcript)
+            if (transcript.includes('shark')) {
+                emit("shark")
+                console.log('Shark detected!');
+            }
+            if (transcript.includes('seal') || transcript.includes('see')) {
+                emit("seal")
+                console.log('Seal detected!');
+            }
+            if (transcript.includes('start')) {
+                emit("start")
+                console.log('start detected!');
+            }
+            // Log confidence level (0 to 1)
+            console.log('Confidence:', result[0].confidence);
+        }
     };
 
     // Handle errors

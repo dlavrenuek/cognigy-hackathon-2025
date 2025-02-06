@@ -29,6 +29,15 @@ export function createPhase1() {
         startX: 0
     })
 
+    const sunSize = Math.min(k.width(), k.height()) * 0.2;
+    const sun = k.add([
+        k.circle(sunSize),
+        k.pos((k.width() - sunSize) / 2, (k.height()) / 2),
+        k.color(255, 255, 0),
+        k.fixed(),
+        k.z(-1)
+    ]);
+
     // Create obstacles
     const obstacles = Array.from({ length: GAME_CONSTANTS.OBSTACLE_COUNT })
         .map((_, i) => createObstacle(i))
@@ -107,10 +116,11 @@ export function createPhase1() {
         waves,
         background,
         obstacles,
+        sun,
         splitLine,
         update,
         cleanup,
         isComplete,
         startTransition
     }
-} 
+}
