@@ -26,13 +26,19 @@ const initialize = (k: K) => {
         if (!result.isFinal) {
             // Check for specific words
             console.log("transcript", transcript)
-            if (transcript.includes('shark')) {
+            if (transcript.includes('bruce') ||
+                transcript.includes('brews') ||
+                transcript.includes('bruise') ||
+                transcript.includes('brooks')) {
                 emit("shark")
-                console.log('Shark detected!');
+                console.log('Bruce detected!');
             }
-            if (transcript.includes('seal') || transcript.includes('see')) {
+            if (transcript.includes('robbie') ||
+                transcript.includes('robby') ||
+                transcript.includes('robert') ||
+                transcript.includes('robin')) {
                 emit("seal")
-                console.log('Seal detected!');
+                console.log('Robbie detected!');
             }
             if (transcript.includes('start')) {
                 emit("start")
@@ -63,13 +69,13 @@ export function createStartScene() {
 
         // Create UI elements
         k.add([
-            k.text("Shark vs Seal", { size: 72 }),
+            k.text("Bruce vs Robbie", { size: 72 }),
             k.pos(k.center().sub(0, k.height() * 0.4)),
             k.anchor("center"),
         ])
 
         k.add([
-            k.text("Say 'shark' or 'seal' to test!", { size: 32 }),
+            k.text("Say 'bruce' or 'robbie' to test!", { size: 32 }),
             k.pos(k.center().sub(0, k.height() * 0.33)),
             k.anchor("center"),
         ])

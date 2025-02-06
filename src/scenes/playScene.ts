@@ -75,7 +75,6 @@ export function createPlayScene() {
 
                 if (result) {
                     isPaused = true;
-                   // k.go("end", { winner: result })
                 }
             }
         })
