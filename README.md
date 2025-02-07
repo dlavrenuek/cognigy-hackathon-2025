@@ -1,8 +1,13 @@
 # cognigy-hackathon-2025
 Ready to ouh?
 
+<center>
+    <img src="preview.gif"/>
+</center>
+
 This is a hackathon project built mostly with AI coding assistant.
 
+# How to play
 To start the game run following in the terminal/console:
 
 ```sh
