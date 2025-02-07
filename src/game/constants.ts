@@ -35,7 +35,7 @@ export const GAME_CONSTANTS = {
     OBSTACLE_TYPES: ["boulder", "iceberg", "barrel"],
     OBSTACLE_SIZE: 100,
     OBSTACLE_SPACING: k.width() / 1.2,  // Increased base spacing between obstacles
-    OBSTACLE_RANDOM_OFFSET: 500,        // Reduced random offset to prevent too much variation
+    OBSTACLE_RANDOM_OFFSET: k.width() * 0.33,        // Reduced random offset to prevent too much variation
 
     // Phase 2 specific constants
     SHARK_SPEED_BOOST: 600,  // Higher boost for shark

@@ -2,7 +2,7 @@ import { k } from "../../kaboom"
 import { GAME_CONSTANTS, COLLISION_SHAPES } from "../constants"
 
 // Keep track of the last obstacle's x position
-let lastObstacleX = 0
+// let lastObstacleX = 0
 
 export function createObstacle(index: number) {
     const randomObstacle = GAME_CONSTANTS.OBSTACLE_TYPES[
@@ -16,11 +16,11 @@ export function createObstacle(index: number) {
     // Ensure minimum distance from last obstacle
     const baseX = Math.max(
         k.width() / 2 + (minSpacing * (index + 1)) + randomOffset,
-        lastObstacleX + minSpacing
+        0 // lastObstacleX + minSpacing
     )
 
     // Update last obstacle position
-    lastObstacleX = baseX
+    // lastObstacleX = baseX
 
     const obstacle = k.add([
         k.sprite(randomObstacle, {

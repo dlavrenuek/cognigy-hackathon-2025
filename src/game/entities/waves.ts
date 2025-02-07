@@ -3,9 +3,9 @@ import { GAME_CONSTANTS } from "../constants"
 
 export function createWaves() {
     const waves = Array.from({ length: GAME_CONSTANTS.WAVES_COUNT }).map((_, i) => {
-        const wave = k.add([
+        return k.add([
             k.sprite("waves1", {
-                width: GAME_CONSTANTS.SCENE_WIDTH * 5,
+                width: GAME_CONSTANTS.SCENE_WIDTH * 10,
                 height: 240,
                 tiled: true,
             }),
@@ -23,8 +23,6 @@ export function createWaves() {
                 speed: GAME_CONSTANTS.GAME_SPEED * (0.2 + i * 0.4)
             }
         ])
-
-        return wave
     })
 
     const oscillate = () => {
