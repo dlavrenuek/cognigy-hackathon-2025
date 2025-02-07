@@ -1,9 +1,9 @@
 # cognigy-hackathon-2025
 Ready to ouh?
 
-<center>
+<p align="center">
     <img src="preview.gif"/>
-</center>
+</p>
 
 This is a hackathon project built mostly with AI coding assistant.
 
